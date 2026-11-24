@@ -9,6 +9,7 @@ use regex::Regex;
 
 use crate::model::{Entity, EntityKind};
 
+/// Every diagram kind supported by the CLI and `render_all`.
 pub const KINDS: &[&str] = &[
     "class",
     "inheritance",
@@ -42,6 +43,7 @@ const BLOCK_KINDS: &[EntityKind] = &[
 pub struct MermaidRenderer;
 
 impl MermaidRenderer {
+    /// Return the human-readable title used for a diagram section.
     pub fn title(kind: &str) -> String {
         match kind {
             "class" => "Class Diagram",
@@ -56,6 +58,7 @@ impl MermaidRenderer {
         .to_owned()
     }
 
+    /// Render one diagram kind, or fail with the list of valid kinds.
     pub fn render(&self, entities: &[Entity], kind: &str) -> anyhow::Result<String> {
         let diagram = match kind {
             "class" => self.class_diagram(entities),
@@ -70,33 +73,37 @@ impl MermaidRenderer {
         Ok(diagram)
     }
 
+    /// Render a titled Mermaid document containing the selected kinds.
     pub fn render_all(&self, entities: &[Entity], kinds: Option<&[String]>) -> String {
-        let selected: Vec<String> = match kinds {
-            Some(kinds) => kinds.to_vec(),
-            None => KINDS.iter().map(|kind| (*kind).to_owned()).collect(),
-        };
+        let selected: Vec<String> = kinds
+            .map(|kinds| kinds.to_vec())
+            .unwrap_or_else(|| KINDS.iter().map(|kind| (*kind).to_owned()).collect());
 
-        let mut sections = vec!["# Contract Graph\n".to_owned()];
-        for kind in selected {
-            let title = Self::title(&kind);
-            let mermaid = self
-                .render(entities, &kind)
-                .unwrap_or_default()
-                .trim_end()
-                .to_owned();
-            sections.push(format!("## {title}\n\n```mermaid\n{mermaid}\n```\n"));
-        }
-        sections.join("\n")
+        std::iter::once("# Contract Graph\n".to_owned())
+            .chain(selected.into_iter().map(|kind| {
+                let title = Self::title(&kind);
+                let mermaid = self
+                    .render(entities, &kind)
+                    .unwrap_or_default()
+                    .trim_end()
+                    .to_owned();
+                format!("## {title}\n\n```mermaid\n{mermaid}\n```\n")
+            }))
+            .collect::<Vec<_>>()
+            .join("\n")
     }
 
+    /// Render the detailed class diagram.
     pub fn class_diagram(&self, entities: &[Entity]) -> String {
         self.class_diagram_impl(entities, true, true, true)
     }
 
+    /// Render the inheritance-only diagram.
     pub fn inheritance_diagram(&self, entities: &[Entity]) -> String {
         self.class_diagram_impl(entities, false, false, false)
     }
 
+    /// Render a class diagram with configurable detail and edge kinds.
     fn class_diagram_impl(
         &self,
         entities: &[Entity],
@@ -116,6 +123,7 @@ impl MermaidRenderer {
         text
     }
 
+    /// Render a flowchart of types used by fields, returns, and parameters.
     pub fn collaboration_diagram(&self, entities: &[Entity]) -> String {
         let nodes = collect(entities, true);
         let ids = identifiers(&nodes);
@@ -152,14 +160,17 @@ impl MermaidRenderer {
         text
     }
 
+    /// Render the callee-oriented call graph.
     pub fn call_graph(&self, entities: &[Entity]) -> String {
         self.call_diagram(entities, false)
     }
 
+    /// Render the caller-oriented call graph.
     pub fn caller_graph(&self, entities: &[Entity]) -> String {
         self.call_diagram(entities, true)
     }
 
+    /// Render a call graph, optionally inverted into a caller graph.
     fn call_diagram(&self, entities: &[Entity], inverse: bool) -> String {
         let functions = functions(entities, "");
         let nodes = function_nodes(&functions);
@@ -201,6 +212,7 @@ impl MermaidRenderer {
         text
     }
 
+    /// Render the module include graph.
     pub fn include_graph(&self, entities: &[Entity]) -> String {
         let modules = modules(entities);
         let (ids, by_key) = module_index(&modules);
@@ -245,6 +257,7 @@ impl MermaidRenderer {
         text
     }
 
+    /// Render the directory-to-directory include graph.
     pub fn directory_graph(&self, entities: &[Entity]) -> String {
         let modules = modules(entities);
         let (ids, by_key) = module_index(&modules);
@@ -296,24 +309,32 @@ impl MermaidRenderer {
     }
 }
 
+/// Identifiers assigned to class-like nodes and lookup tables for edge targets.
 struct Identifiers {
+    /// Identifier for each collected node index.
     ids: HashMap<usize, String>,
+    /// First identifier registered for each entity name.
     by_name: HashMap<String, String>,
+    /// First identifier registered for each `(path, name)` pair.
     by_file: HashMap<(String, String), String>,
 }
 
+/// Collect class-like declarations, optionally including enums.
 fn collect(entities: &[Entity], include_enums: bool) -> Vec<&Entity> {
-    let mut nodes = Vec::new();
-    for entity in entities {
-        if BLOCK_KINDS.contains(&entity.kind) && (include_enums || entity.kind != EntityKind::Enum)
-        {
-            nodes.push(entity);
-        }
-        nodes.extend(collect(&entity.members, include_enums));
-    }
-    nodes
+    entities
+        .iter()
+        .flat_map(|entity| {
+            let current = (BLOCK_KINDS.contains(&entity.kind)
+                && (include_enums || !entity.kind.is_enum()))
+            .then_some(entity);
+            current
+                .into_iter()
+                .chain(collect(&entity.members, include_enums))
+        })
+        .collect()
 }
 
+/// Assign unique Mermaid identifiers to each collected node.
 fn identifiers(nodes: &[&Entity]) -> Identifiers {
     let mut ids = HashMap::new();
     let mut by_name = HashMap::new();
@@ -348,6 +369,7 @@ fn identifiers(nodes: &[&Entity]) -> Identifiers {
     }
 }
 
+/// Render one class block, including fields, methods, and enum cases.
 fn block(entity: &Entity, identifier: &str, detailed: bool) -> Vec<String> {
     let mut lines = vec![format!("  class {identifier} {{")];
     let stereotype = stereotype(entity);
@@ -388,6 +410,7 @@ fn block(entity: &Entity, identifier: &str, detailed: bool) -> Vec<String> {
     lines
 }
 
+/// Return the Mermaid stereotype for an entity, or an empty string.
 fn stereotype(entity: &Entity) -> &'static str {
     if entity.kind == EntityKind::Enum {
         return "<<enumeration>>";
@@ -401,6 +424,7 @@ fn stereotype(entity: &Entity) -> &'static str {
     ""
 }
 
+/// Convert a source type into Mermaid-safe display text.
 fn display_type(raw: &str) -> String {
     let text = raw
         .replace(['&', '\''], "")
@@ -409,6 +433,7 @@ fn display_type(raw: &str) -> String {
     WHITESPACE.replace_all(&text, " ").trim().to_owned()
 }
 
+/// Build inheritance, implementation, and optional dependency edges.
 fn class_edges(nodes: &[&Entity], ids: &Identifiers, dependencies: bool) -> Vec<String> {
     let mut edges = Vec::new();
     let mut seen = HashSet::new();
@@ -455,6 +480,7 @@ fn class_edges(nodes: &[&Entity], ids: &Identifiers, dependencies: bool) -> Vec<
     edges
 }
 
+/// Resolve a type name against same-file nodes first, then by name.
 fn lookup(
     name: &str,
     by_name: &HashMap<String, String>,
@@ -478,6 +504,7 @@ fn lookup(
         .cloned()
 }
 
+/// Extract referenced type tokens, ignoring built-in scalar types.
 fn type_names(raw: &str) -> Vec<String> {
     TYPE_TOKEN
         .find_iter(raw)
@@ -487,47 +514,65 @@ fn type_names(raw: &str) -> Vec<String> {
         .collect()
 }
 
+/// Collect unique type names referenced by fields, returns, and parameters.
 fn used_types(entity: &Entity) -> Vec<String> {
-    let mut names = Vec::new();
-    for field in &entity.fields {
-        names.extend(type_names(&field.r#type));
-    }
-    for member in &entity.members {
-        names.extend(type_names(&member.return_type));
-        for param in &member.doc.params {
-            names.extend(type_names(&param.r#type));
-        }
-    }
-
-    let mut out = Vec::new();
-    for name in names {
-        if !out.contains(&name) {
-            out.push(name);
-        }
-    }
-    out
+    entity
+        .fields
+        .iter()
+        .flat_map(|field| type_names(&field.r#type))
+        .chain(
+            entity
+                .members
+                .iter()
+                .flat_map(|member| type_names(&member.return_type)),
+        )
+        .chain(entity.members.iter().flat_map(|member| {
+            member
+                .doc
+                .params
+                .iter()
+                .flat_map(|param| type_names(&param.r#type))
+        }))
+        .fold(Vec::new(), |mut out, name| {
+            if !out.contains(&name) {
+                out.push(name);
+            }
+            out
+        })
 }
 
+/// Flatten functions and methods, tagging each with its owning type name.
 fn functions<'a>(entities: &'a [Entity], owner: &str) -> Vec<(&'a Entity, String)> {
-    let mut out = Vec::new();
-    for entity in entities {
-        if matches!(entity.kind, EntityKind::Function | EntityKind::Method) {
-            out.push((entity, owner.to_owned()));
-        }
-        if BLOCK_KINDS.contains(&entity.kind) {
-            out.extend(functions(&entity.members, &entity.name));
-        }
-    }
-    out
+    entities
+        .iter()
+        .flat_map(|entity| {
+            let current = entity
+                .kind
+                .is_callable()
+                .then(|| (entity, owner.to_owned()));
+            let children = if BLOCK_KINDS.contains(&entity.kind) {
+                functions(&entity.members, &entity.name)
+            } else {
+                Vec::new()
+            };
+            current.into_iter().chain(children)
+        })
+        .collect()
 }
 
+/// Identifiers and labels assigned to function and method nodes.
 struct FunctionNodes {
+    /// Identifier for each callable node index.
     ids: HashMap<usize, String>,
+    /// Display label for each callable node index.
     labels: HashMap<usize, String>,
+    /// First identifier registered for each name.
     by_name: HashMap<String, String>,
+    /// First identifier registered for each `(path, name)` pair.
     by_file: HashMap<(String, String), String>,
 }
 
+/// Assign stable identifiers and qualified labels to callable nodes.
 fn function_nodes(functions: &[(&Entity, String)]) -> FunctionNodes {
     let mut ids = HashMap::new();
     let mut labels = HashMap::new();
@@ -597,6 +642,7 @@ fn function_nodes(functions: &[(&Entity, String)]) -> FunctionNodes {
     }
 }
 
+/// Qualify `self.method` and `cls.method` calls with the owning type.
 fn call_target(call: &str, owner: &str) -> String {
     if let Some((prefix, rest)) = call.split_once('.')
         && (prefix == "self" || prefix == "cls")
@@ -607,6 +653,7 @@ fn call_target(call: &str, owner: &str) -> String {
     call.to_owned()
 }
 
+/// Build a dotted label from module, owner, and entity names.
 fn qualified(entity: &Entity, owner: &str) -> String {
     let mut parts = Vec::new();
     if !entity.module.is_empty() {
@@ -625,6 +672,7 @@ fn qualified(entity: &Entity, owner: &str) -> String {
     }
 }
 
+/// Return the module entities from a flat entity list.
 fn modules(entities: &[Entity]) -> Vec<&Entity> {
     entities
         .iter()
@@ -632,6 +680,7 @@ fn modules(entities: &[Entity]) -> Vec<&Entity> {
         .collect()
 }
 
+/// Assign module identifiers and index them by path, stem, and name.
 fn module_index(modules: &[&Entity]) -> (HashMap<usize, String>, HashMap<String, String>) {
     let mut ids = HashMap::new();
     let mut by_key = HashMap::new();
@@ -669,6 +718,7 @@ fn module_index(modules: &[&Entity]) -> (HashMap<usize, String>, HashMap<String,
     (ids, by_key)
 }
 
+/// Resolve an include target to a known module identifier.
 fn resolve_module(target: &str, by_key: &HashMap<String, String>) -> Option<String> {
     for candidate in include_candidates(target) {
         if let Some(found) = by_key.get(&candidate) {
@@ -678,6 +728,7 @@ fn resolve_module(target: &str, by_key: &HashMap<String, String>) -> Option<Stri
     None
 }
 
+/// Expand one include string into the names `dox.py` tries to match.
 fn include_candidates(target: &str) -> Vec<String> {
     let mut raw = target
         .trim()
@@ -712,14 +763,17 @@ fn include_candidates(target: &str) -> Vec<String> {
     candidates
 }
 
+/// Replace every character Mermaid cannot use in an identifier.
 fn sanitize(value: &str) -> String {
     IDENTIFIER.replace_all(value, "_").into_owned()
 }
 
+/// Escape text for a double-quoted Mermaid label.
 fn label(text: &str) -> String {
     text.replace('"', "'").replace('\n', " ")
 }
 
+/// Normalize a path to POSIX separators for display.
 fn as_posix(path: &str) -> String {
     if path.is_empty() {
         ".".to_owned()
@@ -728,18 +782,21 @@ fn as_posix(path: &str) -> String {
     }
 }
 
+/// Return the final path component, when there is one.
 fn path_file_name(path: &str) -> Option<String> {
     Path::new(path)
         .file_name()
         .map(|name| name.to_string_lossy().into_owned())
 }
 
+/// Return the final path component without its extension.
 fn path_file_stem(path: &str) -> Option<String> {
     Path::new(path)
         .file_stem()
         .map(|stem| stem.to_string_lossy().into_owned())
 }
 
+/// Return the parent directory in POSIX form, using `.` for none.
 fn parent_posix(path: &str) -> String {
     let path = Path::new(path);
     match path.parent() {

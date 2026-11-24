@@ -5,7 +5,8 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
-use crate::doc::{DOC_PARSER, split_lines};
+use crate::ast::Visibility;
+use crate::documentation::{DOC_PARSER, split_lines};
 use crate::lang::{LINE_COMMENT_RE, Language, body_slice, consume_block, read_block_comment};
 use crate::model::{Entity, EntityKind, Field, Variant, dedup_push};
 
@@ -54,10 +55,12 @@ const CALL_STOP: &[&str] = &[
 pub struct RustLanguage;
 
 impl Language for RustLanguage {
+    /// Rust uses a single `.rs` extension.
     fn extensions(&self) -> &'static [&'static str] {
         &[".rs"]
     }
 
+    /// Scan doc comments and emit Rust entities in source order.
     fn parse(&self, source: &str, filename: &str) -> Vec<Entity> {
         let lines = split_lines(source);
         let mut module = Entity::new(EntityKind::Module, filename);
@@ -178,6 +181,7 @@ impl Language for RustLanguage {
     }
 }
 
+/// Build a function entity from a regex match and its parameter body.
 fn parse_fn(
     caps: &regex::Captures<'_>,
     lines: &[&str],
@@ -203,6 +207,7 @@ fn parse_fn(
     (entity, consumed)
 }
 
+/// Parse documented fields from a struct or enum body.
 fn parse_rust_fields(lines: &[&str]) -> Vec<Field> {
     let mut out = Vec::new();
     let mut pending: Vec<String> = Vec::new();
@@ -225,13 +230,13 @@ fn parse_rust_fields(lines: &[&str]) -> Vec<Field> {
         };
 
         let visibility = if caps.get(1).is_some() {
-            "public"
+            Visibility::Public
         } else {
-            "private"
+            Visibility::Private
         };
         let mut field = Field::new(&caps[2]);
         field.r#type = caps[3].trim().trim_end_matches(',').to_owned();
-        field.visibility = visibility.to_owned();
+        field.visibility = visibility;
         field.description = pending.join(" ");
         out.push(field);
         pending.clear();
@@ -240,6 +245,7 @@ fn parse_rust_fields(lines: &[&str]) -> Vec<Field> {
     out
 }
 
+/// Parse enum variants and their attached doc comments.
 fn parse_variants(lines: &[&str]) -> Vec<Variant> {
     let mut out = Vec::new();
     let mut pending: Vec<String> = Vec::new();
@@ -268,6 +274,7 @@ fn parse_variants(lines: &[&str]) -> Vec<Variant> {
     out
 }
 
+/// Parse the methods declared inside an `impl` block.
 fn parse_impl_body(lines: &[&str]) -> Vec<Entity> {
     let mut out = Vec::new();
     let mut pending: Vec<String> = Vec::new();
@@ -320,6 +327,7 @@ fn parse_impl_body(lines: &[&str]) -> Vec<Entity> {
     out
 }
 
+/// Collect `use` and `extern crate` targets as module includes.
 fn includes(lines: &[&str]) -> Vec<String> {
     let mut out = Vec::new();
 
@@ -339,6 +347,7 @@ fn includes(lines: &[&str]) -> Vec<String> {
     out
 }
 
+/// Extract function calls from a block, skipping keywords and control flow.
 fn calls_from_lines(lines: &[&str]) -> Vec<String> {
     let mut out = Vec::new();
     for raw in lines {
@@ -353,6 +362,7 @@ fn calls_from_lines(lines: &[&str]) -> Vec<String> {
     out
 }
 
+/// Split a parameter list on top-level commas.
 fn split_args(raw: &str) -> Vec<String> {
     let mut parts = Vec::new();
     let mut depth: i32 = 0;

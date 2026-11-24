@@ -8,10 +8,15 @@ use crate::model::Entity;
 
 pub mod cpp;
 pub mod python;
+pub mod registry;
 pub mod rust;
 
+/// A source-language plugin that lowers one file into the shared model.
 pub trait Language {
+    /// File extensions handled by this plugin, including the leading dot.
     fn extensions(&self) -> &'static [&'static str];
+
+    /// Parse `source`, using `filename` as the module entity's name.
     fn parse(&self, source: &str, filename: &str) -> Vec<Entity>;
 }
 

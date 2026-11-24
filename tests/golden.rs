@@ -2,9 +2,9 @@
 
 use std::path::{Path, PathBuf};
 
-use dozen::config::Config;
-use dozen::converter::Converter;
-use dozen::files::select_files;
+use dozen::engine::config::Config;
+use dozen::engine::converter::Converter;
+use dozen::engine::files::FileFinder;
 
 fn repo_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -43,7 +43,9 @@ fn load_config(root: &Path, config: Option<&str>) -> Config {
 
 fn select(cfg: &Config, input: Option<&str>) -> Vec<PathBuf> {
     let spec = input.unwrap_or(&cfg.glob);
-    select_files(spec, Some(&cfg.base_dir)).expect("select files")
+    FileFinder::new(Some(&cfg.base_dir))
+        .select(spec)
+        .expect("select files")
 }
 
 fn convert(root: &Path, input: Option<&str>, config: Option<&str>) -> String {

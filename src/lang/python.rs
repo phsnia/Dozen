@@ -8,7 +8,8 @@ use ruff_python_codegen::{Generator, Indentation, Mode};
 use ruff_python_parser::parse_module;
 use ruff_source_file::LineEnding;
 
-use crate::doc::{DOC_PARSER, cleandoc};
+use crate::ast::Visibility;
+use crate::documentation::{DOC_PARSER, cleandoc};
 use crate::lang::Language;
 use crate::model::{Entity, EntityKind, Field, Variant, dedup_push};
 
@@ -20,10 +21,12 @@ const ABSTRACT_BASES: &[&str] = &["ABC", "ABCMeta"];
 pub struct PythonLanguage;
 
 impl Language for PythonLanguage {
+    /// Python uses a single `.py` extension.
     fn extensions(&self) -> &'static [&'static str] {
         &[".py"]
     }
 
+    /// Parse a Python module and emit its classes and functions.
     fn parse(&self, source: &str, filename: &str) -> Vec<Entity> {
         let parsed = match parse_module(source) {
             Ok(parsed) => parsed,
@@ -67,6 +70,7 @@ impl Language for PythonLanguage {
     }
 }
 
+/// Return the one-based source line containing `stmt`.
 fn line_of(source: &str, stmt: &Stmt) -> usize {
     let offset = match stmt {
         Stmt::FunctionDef(item) => item.range.start().to_usize(),
@@ -80,6 +84,7 @@ fn line_of(source: &str, stmt: &Stmt) -> usize {
         + 1
 }
 
+/// Return the cleaned first docstring in a statement body.
 fn docstring(body: &[Stmt]) -> Option<String> {
     let Stmt::Expr(item) = body.first()? else {
         return None;
@@ -90,6 +95,7 @@ fn docstring(body: &[Stmt]) -> Option<String> {
     Some(cleandoc(literal.value.to_str()))
 }
 
+/// Render an expression with CPython `ast.unparse` formatting.
 fn unparse(expr: &Expr) -> String {
     match expr {
         Expr::Subscript(subscript) => format!(
@@ -134,6 +140,7 @@ fn unparse_slice(slice: &Expr) -> String {
     }
 }
 
+/// Render one element of a subscript slice.
 fn unparse_slice_element(expr: &Expr) -> String {
     match expr {
         Expr::Slice(slice) => {
@@ -155,6 +162,7 @@ fn unparse_slice_element(expr: &Expr) -> String {
     }
 }
 
+/// Build a function or method entity from its AST node.
 fn function(stmt: &Stmt, kind: EntityKind) -> Entity {
     let Stmt::FunctionDef(node) = stmt else {
         unreachable!("function() expects a function statement")
@@ -214,6 +222,7 @@ fn function(stmt: &Stmt, kind: EntityKind) -> Entity {
     entity
 }
 
+/// Build a class or enum entity, including fields and public methods.
 fn class_entity(node: &StmtClassDef, kind: EntityKind, source: &str) -> Entity {
     let doc_text = docstring(&node.body).unwrap_or_default();
     let doc = DOC_PARSER.parse(&doc_text);
@@ -254,10 +263,12 @@ fn class_entity(node: &StmtClassDef, kind: EntityKind, source: &str) -> Entity {
     entity
 }
 
+/// Build a method entity that belongs to the enclosing class.
 fn function_instance(stmt: &Stmt) -> Entity {
     function(stmt, EntityKind::Method)
 }
 
+/// Collect enum members and their docstrings.
 fn enum_variants(node: &StmtClassDef) -> Vec<Variant> {
     let mut variants = Vec::new();
     for item in &node.body {
@@ -278,6 +289,7 @@ fn enum_variants(node: &StmtClassDef) -> Vec<Variant> {
     variants
 }
 
+/// Return the explicit base classes that should appear in diagrams.
 fn base_names(node: &StmtClassDef) -> Vec<String> {
     let Some(arguments) = &node.arguments else {
         return Vec::new();
@@ -296,6 +308,7 @@ fn base_names(node: &StmtClassDef) -> Vec<String> {
     names
 }
 
+/// Collect class annotations and `self.x` assignments as data fields.
 fn fields(node: &StmtClassDef, init: Option<&Stmt>) -> Vec<Field> {
     let mut found: Vec<Field> = Vec::new();
     let mut index_by_name: HashMap<String, usize> = HashMap::new();
@@ -334,7 +347,7 @@ fn fields(node: &StmtClassDef, init: Option<&Stmt>) -> Vec<Field> {
                                 &mut index_by_name,
                                 &name,
                                 &unparse(&assign.annotation),
-                                &visibility(&name),
+                                visibility(&name),
                             );
                         }
                     }
@@ -354,7 +367,7 @@ fn fields(node: &StmtClassDef, init: Option<&Stmt>) -> Vec<Field> {
                                 &mut index_by_name,
                                 &name,
                                 &inferred,
-                                &visibility(&name),
+                                visibility(&name),
                             );
                         }
                     }
@@ -382,6 +395,7 @@ fn fields(node: &StmtClassDef, init: Option<&Stmt>) -> Vec<Field> {
     found
 }
 
+/// Add or merge one field, skipping dunder attributes.
 fn add_field(
     found: &mut Vec<Field>,
     index_by_name: &mut HashMap<String, usize>,
@@ -400,11 +414,12 @@ fn add_field(
     }
     let mut field = Field::new(name);
     field.r#type = type_.to_owned();
-    field.visibility = visibility.to_owned();
+    field.visibility = Visibility::from_keyword(visibility);
     index_by_name.insert(name.to_owned(), found.len());
     found.push(field);
 }
 
+/// Extract `x` from a `self.x` attribute expression.
 fn self_attribute(expr: &Expr) -> Option<String> {
     let Expr::Attribute(attribute) = expr else {
         return None;
@@ -419,16 +434,18 @@ fn self_attribute(expr: &Expr) -> Option<String> {
     }
 }
 
-fn visibility(name: &str) -> String {
+/// Infer field visibility from Python's underscore conventions.
+fn visibility(name: &str) -> &'static str {
     if name.starts_with("__") {
-        "private".to_owned()
+        "private"
     } else if name.starts_with('_') {
-        "protected".to_owned()
+        "protected"
     } else {
-        "public".to_owned()
+        "public"
     }
 }
 
+/// Return the simple name of a name, attribute, or subscript expression.
 fn node_name(expr: &Expr) -> String {
     match expr {
         Expr::Name(name) => name.id.to_string(),
@@ -438,6 +455,7 @@ fn node_name(expr: &Expr) -> String {
     }
 }
 
+/// Collect imported module names in source order.
 fn imports(body: &[Stmt]) -> Vec<String> {
     let mut out = Vec::new();
     for level in collect_bfs(body, false) {
@@ -464,6 +482,7 @@ fn imports(body: &[Stmt]) -> Vec<String> {
     out
 }
 
+/// Collect call expressions from a statement body.
 fn calls(stmt: &Stmt) -> Vec<String> {
     let mut out = Vec::new();
     for level in collect_bfs(std::slice::from_ref(stmt), true) {
@@ -479,6 +498,7 @@ fn calls(stmt: &Stmt) -> Vec<String> {
     out
 }
 
+/// Render a call target as a dotted name.
 fn call_name(expr: &Expr) -> String {
     match expr {
         Expr::Name(name) => name.id.to_string(),
@@ -498,6 +518,7 @@ fn call_name(expr: &Expr) -> String {
     }
 }
 
+/// True when a class inherits from one of the known enum bases.
 fn is_enum(node: &StmtClassDef) -> bool {
     let Some(arguments) = &node.arguments else {
         return false;
@@ -509,6 +530,7 @@ fn is_enum(node: &StmtClassDef) -> bool {
     })
 }
 
+/// True when a class is abstract by base class or abstract methods.
 fn is_abstract(node: &StmtClassDef) -> bool {
     if let Some(arguments) = &node.arguments {
         for base in &arguments.args {
@@ -529,6 +551,7 @@ fn is_abstract(node: &StmtClassDef) -> bool {
     })
 }
 
+/// True when a method carries an abstract decorator.
 fn is_abstract_method(node: &StmtFunctionDef) -> bool {
     node.decorator_list.iter().any(|decorator| {
         let name = match &decorator.expression {
@@ -554,13 +577,18 @@ fn collect_bfs<'a>(stmts: &'a [Stmt], skip_defs: bool) -> Vec<Vec<AnyNodeRef<'a>
     visitor.levels
 }
 
+/// AST visitor that records every node by its depth from the roots.
 struct BfsVisitor<'a> {
+    /// Current traversal depth.
     depth: usize,
+    /// Nodes grouped by traversal depth.
     levels: Vec<Vec<AnyNodeRef<'a>>>,
+    /// Whether nested function, class, and lambda bodies are pruned.
     skip_defs: bool,
 }
 
 impl<'a> SourceOrderVisitor<'a> for BfsVisitor<'a> {
+    /// Record a node at the current depth and optionally prune its subtree.
     fn enter_node(&mut self, node: AnyNodeRef<'a>) -> TraversalSignal {
         let skip = self.skip_defs
             && self.depth > 0
@@ -584,6 +612,7 @@ impl<'a> SourceOrderVisitor<'a> for BfsVisitor<'a> {
         }
     }
 
+    /// Pop back to the parent depth after leaving a node.
     fn leave_node(&mut self, _node: AnyNodeRef<'a>) {
         self.depth = self.depth.saturating_sub(1);
     }

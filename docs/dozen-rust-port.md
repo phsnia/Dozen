@@ -39,10 +39,15 @@ No `python3` subprocess is used at runtime.
   `ruff_source_file` for line endings).
 - `src/main.rs`: thin entry point over `dozen::cli::run`.
 - `src/lib.rs`: public modules for integration tests.
-- `src/cli.rs`: `convert` / `diagram` / `init` with argparse-compatible help,
-  errors, and exit codes.
-- `src/parser.rs`: tested hand-rolled argv parser (flags, options, positionals,
-  `--`, combined short flags, attached option values); reused by `cli.rs`.
+- `src/cli/`: command objects with argparse-compatible help, errors, and exit
+  codes (`mod.rs`, `command.rs`), the hand-rolled argv parser (`parser.rs`),
+  and `ini.cfg` scaffolding (`scaffold.rs`).
+- `src/engine/`: `Config`, glob/file selection, and the conversion pipeline.
+- `src/documentation/mod.rs`: `DocParser`, `Tag`/`ListKind`, and `DocBuilder`.
+- `src/model/mod.rs`: the language-agnostic entity/documentation model.
+- `src/lang/`: language plugins (`rust.rs`, `cpp.rs`, `python.rs`), the shared
+  `Language` trait, and the extension registry (`registry.rs`).
+- `src/renderer/`: Markdown reference and Mermaid diagram renderers.
 - `docs/dox.py`: complete reference implementation (2,291 lines).
 - `docs/dox-contract.md`, `docs/dox-contract.cfg`,
   `docs/dox-contract-graph.md`: expected self-hosted output.
@@ -53,7 +58,7 @@ No `python3` subprocess is used at runtime.
 - `tests/golden/`: frozen outputs for every fixture, `-k all` diagrams, and the
   self-hosted contract.
 
-`cargo test` passes (41 tests across unit, golden, and CLI suites).
+`cargo test` passes (47 tests across unit, golden, and CLI suites).
 
 ---
 
@@ -64,17 +69,23 @@ Cargo.toml
 src/
   main.rs              # argv -> cli::run -> ExitCode
   lib.rs               # public modules for integration tests
-  parser.rs            # existing arg parser, reused by cli.rs
-  cli.rs               # convert / diagram / init orchestration
-  config.rs            # Config, DEFAULT_CONFIG_TEXT, parse_config, load
-  model.rs             # EntityKind, Param, Variant, Field, Doc, Entity
-  doc.rs               # DocParser + split_lines + cleandoc
-  registry.rs          # extension -> language mapping
-  files.rs             # glob expansion, collect_files, path selection
-  converter.rs         # parse + stamp + write files
-  scaffold.rs          # init / ini.cfg writing
+  cli/
+    mod.rs             # Cli struct + root argparse surface
+    command.rs         # Command trait, Convert/Diagram/Init objects
+    parser.rs          # hand-rolled argv parser
+    scaffold.rs        # init / ini.cfg writing
+  engine/
+    mod.rs             # pipeline module declarations
+    config.rs          # Config, DEFAULT_CONFIG_TEXT, Config::parse, load
+    converter.rs       # TextCodec + Converter pipeline
+    files.rs           # FileFinder + OutputResolver
+  documentation/
+    mod.rs             # DocParser, Tag/ListKind, DocBuilder, split_lines
+  model/
+    mod.rs             # EntityKind, Param, Variant, Field, Doc, Entity
   lang/
     mod.rs             # Language trait, consume_block, read_block_comment
+    registry.rs        # LanguageRegistry (extension -> language)
     rust.rs            # heuristic port of RustLanguage
     cpp.rs             # heuristic port of CppLanguage
     python.rs          # Ruff-AST port of PythonLanguage
@@ -160,7 +171,7 @@ tempfile = "3"
 
 ## Milestone 1 — Model, DocParser, Config
 
-### `src/model.rs`
+### `src/model/mod.rs`
 
 Port exactly:
 
@@ -175,7 +186,7 @@ Port exactly:
   variants, fields, bases, implements, module, path, line, calls, includes }`
 - `Default` implementations matching Python dataclass defaults.
 
-### `src/doc.rs`
+### `src/documentation/mod.rs`
 
 Port `DocParser` line-by-line.
 
@@ -199,12 +210,13 @@ Port `DocParser` line-by-line.
   - strip leading/trailing blank lines,
   - left-strip the first line.
 
-### `src/config.rs`
+### `src/engine/config.rs`
 
 - `CONFIG_FILENAME = "ini.cfg"`.
 - Exact `DEFAULT_CONFIG_TEXT`.
 - `Config` with `glob`, `output`, `diagram`, `encoding`, `base_dir`.
-- `Config::defaults`, `Config::load`, `parse_config`:
+- `Config::defaults`, `Config::load`, `Config::parse` (delegating to the private
+  `ConfigBuilder` state object):
   - trim lines; skip empty and `#`/`;` comments;
   - `[section]` matching, lowercase section;
   - `key = value` only in `[defaults]`;
@@ -248,7 +260,7 @@ Port exactly:
   - return `(lines, consumed)`; `([], 0)` when not a block start.
 - Safe body-slice helper that clamps like Python slicing.
 
-### `src/registry.rs`
+### `src/lang/registry.rs`
 
 - Extension -> language mapping for:
   - `.py`
@@ -493,12 +505,11 @@ behavior.
 
 ## Milestone 7 — Files, converter, scaffold, CLI
 
-### `src/files.rs`
+### `src/engine/files.rs`
 
-- `candidate_bases(base_dir)`:
-  - resolved base dir, its parent, current dir;
-  - dedupe preserving order.
-- `collect_files(root, base_dir)`:
+- `FileFinder::new(base_dir)` / `FileFinder::collect(root)`:
+  - `candidate_bases` -> resolved base dir, its parent, current dir;
+  - dedupe preserving order;
   - absolute pattern -> single search base;
   - relative -> candidate bases;
   - first base with matches wins;
@@ -506,39 +517,41 @@ behavior.
   - file candidates accepted only with a registered extension;
   - directory candidates recursively include matching files;
   - dedupe, then sort by path string (Python `Path` order).
-- `select_files(input, config)`:
-  - input or config `glob`;
+- `FileFinder::select(root)`:
   - no matches -> `No supported source files found for '<spec>'`, exit 1.
-- `resolve_output(value, default, base_dir)`:
+- `OutputResolver::new(base_dir)` / `resolve(value, default)`:
   - absolute stays absolute;
   - relative joins `base_dir`.
 
-### `src/converter.rs`
+### `src/engine/converter.rs`
 
+- `TextCodec` owns the encoding boundary:
+  - `read`/`decode` reject unknown labels and invalid sequences;
+  - `encode`/`write` reject unrepresentable output.
 - `Converter::entities(path)`:
   - look up language by lowercase suffix;
-  - read using config encoding;
+  - read using the codec;
   - parse;
-  - stamp `path` and `module = path.stem` recursively.
+  - stamp `path` and `module = path.stem` recursively via `Entity::stamp`.
 - `Converter::file(path)`.
-- `Converter::project(paths)`.
+- `Converter::project(paths)` (iterator-collected).
 - `Converter::files(paths, output)`:
   - skip documents whose trimmed rendering is empty;
   - prepend `# <filename>\n\n`;
   - join with `\n\n`; append final `\n`;
-  - write using config encoding.
+  - write using the codec.
 - `Converter::diagram(paths, output, kind)`:
   - `all` -> every kind; otherwise one kind;
   - write `render_all`.
 
-### `src/scaffold.rs`
+### `src/cli/scaffold.rs`
 
 - Create target directory recursively.
 - Refuse overwrite unless `--force`:
   `Refusing to overwrite <path> (use --force).`, exit 1.
 - Write exact `DEFAULT_CONFIG_TEXT`.
 
-### `src/parser.rs`
+### `src/cli/parser.rs`
 
 Extend the existing parser:
 
@@ -554,19 +567,26 @@ Extend the existing parser:
   - `--`.
 - Subcommand `-c` overrides global config.
 
-### `src/cli.rs`
+### `src/cli/mod.rs`
 
+- `Cli` owns process arguments and argparse-compatible dispatch.
 - `convert [input] [-o OUTPUT] [-c CONFIG]`
 - `diagram [input] [-o OUTPUT] [-k KIND] [-c CONFIG]`
 - `init [target] [--force]`
 - No args -> print help, exit 0.
 - No subcommand but other args -> inject `convert` unless help/version present.
-- Load config, select files, resolve output, create parent dirs.
 - Print `Generated: <path>` / `Wrote: <path>`.
 - Map known failures to stderr + exit code 1:
   - missing config;
   - no source files;
   - refusing overwrite.
+
+### `src/cli/command.rs`
+
+- `Command` trait: `name`, `usage`, `help`, `fields`, `run`.
+- `ConvertCommand`, `DiagramCommand`, `InitCommand` own their metadata and
+  execution; `Context` supplies config loading and output resolution.
+- `COMMANDS` statically registers every command for lookup and help order.
 
 ### `src/main.rs` / `src/lib.rs`
 

@@ -5,7 +5,8 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
-use crate::doc::{DOC_PARSER, split_lines};
+use crate::ast::Visibility;
+use crate::documentation::{DOC_PARSER, split_lines};
 use crate::lang::{
     LINE_COMMENT_RE, Language, body_slice, consume_block, is_identifier, read_block_comment,
 };
@@ -68,10 +69,12 @@ const CALL_STOP: &[&str] = &[
 pub struct CppLanguage;
 
 impl Language for CppLanguage {
+    /// C++ headers and implementation files share one parser.
     fn extensions(&self) -> &'static [&'static str] {
         &[".cpp", ".hpp", ".h", ".cc", ".cxx", ".hh"]
     }
 
+    /// Scan doc comments and emit C++ entities in source order.
     fn parse(&self, source: &str, filename: &str) -> Vec<Entity> {
         let lines = split_lines(source);
         let mut module = Entity::new(EntityKind::Module, filename);
@@ -166,9 +169,9 @@ impl Language for CppLanguage {
                     EntityKind::Struct
                 };
                 let default_visibility = if kind == EntityKind::Struct {
-                    "public"
+                    Visibility::Public
                 } else {
-                    "private"
+                    Visibility::Private
                 };
                 let doc = DOC_PARSER.parse(&pending.join("\n"));
                 let consumed = consume_block(&lines, index);
@@ -224,11 +227,12 @@ impl Language for CppLanguage {
     }
 }
 
-fn parse_class_body(lines: &[&str], default_visibility: &str) -> (Vec<Entity>, Vec<Field>) {
+/// Parse members from a class or struct body using the current visibility.
+fn parse_class_body(lines: &[&str], default_visibility: Visibility) -> (Vec<Entity>, Vec<Field>) {
     let mut methods = Vec::new();
     let mut fields = Vec::new();
     let mut pending: Vec<String> = Vec::new();
-    let mut visibility = default_visibility.to_owned();
+    let mut visibility = default_visibility;
     let mut index = 0;
 
     while index < lines.len() {
@@ -248,7 +252,7 @@ fn parse_class_body(lines: &[&str], default_visibility: &str) -> (Vec<Entity>, V
         }
 
         if let Some(caps) = ACCESS.captures(stripped) {
-            visibility = caps[1].to_owned();
+            visibility = Visibility::from_keyword(&caps[1]);
             pending.clear();
             index += 1;
             continue;
@@ -294,7 +298,7 @@ fn parse_class_body(lines: &[&str], default_visibility: &str) -> (Vec<Entity>, V
             if type_ != "return" && type_ != "delete" {
                 let mut field = Field::new(&caps[2]);
                 field.r#type = type_.to_owned();
-                field.visibility = visibility.clone();
+                field.visibility = visibility;
                 field.r#static = STATIC_FIELD.is_match(stripped);
                 field.description = pending.join(" ");
                 fields.push(field);
@@ -311,6 +315,7 @@ fn parse_class_body(lines: &[&str], default_visibility: &str) -> (Vec<Entity>, V
     (methods, fields)
 }
 
+/// Split a base-class clause into individual base names.
 fn base_names(raw: Option<&str>) -> Vec<String> {
     let Some(raw) = raw else {
         return Vec::new();
@@ -326,6 +331,7 @@ fn base_names(raw: Option<&str>) -> Vec<String> {
     names
 }
 
+/// Collect `#include` targets as module includes.
 fn includes(lines: &[&str]) -> Vec<String> {
     let mut out = Vec::new();
     for raw in lines {
@@ -336,6 +342,7 @@ fn includes(lines: &[&str]) -> Vec<String> {
     out
 }
 
+/// Extract function calls from a block, skipping C++ keywords and casts.
 fn calls_from_lines(lines: &[&str]) -> Vec<String> {
     let mut out = Vec::new();
     for raw in lines {
@@ -350,6 +357,7 @@ fn calls_from_lines(lines: &[&str]) -> Vec<String> {
     out
 }
 
+/// Map parameter names to their declared types.
 fn parse_cpp_params(raw: &str) -> HashMap<String, String> {
     let mut types = HashMap::new();
     for part in raw.split(',') {
@@ -374,6 +382,7 @@ fn parse_cpp_params(raw: &str) -> HashMap<String, String> {
     types
 }
 
+/// Fill missing parameter types from the parsed declaration.
 fn merge_types(doc: &mut crate::model::Doc, types: &HashMap<String, String>) {
     for param in &mut doc.params {
         if param.r#type.is_empty()

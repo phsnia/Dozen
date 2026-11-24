@@ -1,11 +1,16 @@
+//! `dozen` is a pure-Rust port of `dox.py` for turning Doxygen-style source
+//! comments into Markdown API references and Mermaid diagrams.
+//!
+//! The public modules expose the same pipeline the binary uses, which keeps
+//! integration tests and external tooling on the exact production code path.
+
+pub mod ast;
 pub mod cli;
-pub mod config;
-pub mod converter;
-pub mod doc;
-pub mod files;
+pub mod documentation;
+pub mod engine;
+pub mod graph;
 pub mod lang;
 pub mod model;
 pub mod parser;
-pub mod registry;
 pub mod renderer;
-pub mod scaffold;
+pub mod semantic;
