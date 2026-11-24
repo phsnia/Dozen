@@ -723,25 +723,25 @@ flowchart LR
   fn_command_Command_parse["command.Command.parse"]
   fn_command_Command_error_program["command.Command.error_program"]
   fn_command_Command_print_help["command.Command.print_help"]
-  fn_command_ConvertCommand_name["command.ConvertCommand.name"]
-  fn_command_ConvertCommand_usage["command.ConvertCommand.usage"]
-  fn_command_ConvertCommand_help["command.ConvertCommand.help"]
-  fn_command_ConvertCommand_fields["command.ConvertCommand.fields"]
-  fn_command_ConvertCommand_run["command.ConvertCommand.run"]
-  fn_command_DiagramCommand_name["command.DiagramCommand.name"]
-  fn_command_DiagramCommand_usage["command.DiagramCommand.usage"]
-  fn_command_DiagramCommand_help["command.DiagramCommand.help"]
-  fn_command_DiagramCommand_fields["command.DiagramCommand.fields"]
-  fn_command_DiagramCommand_run["command.DiagramCommand.run"]
-  fn_command_InitCommand_name["command.InitCommand.name"]
-  fn_command_InitCommand_usage["command.InitCommand.usage"]
-  fn_command_InitCommand_help["command.InitCommand.help"]
-  fn_command_InitCommand_fields["command.InitCommand.fields"]
-  fn_command_InitCommand_run["command.InitCommand.run"]
   fn_command_all["command.all"]
   fn_command_find["command.find"]
   fn_command_kind_choices["command.kind_choices"]
   fn_command_parse_or_exit["command.parse_or_exit"]
+  fn_convert_ConvertCommand_name["convert.ConvertCommand.name"]
+  fn_convert_ConvertCommand_usage["convert.ConvertCommand.usage"]
+  fn_convert_ConvertCommand_help["convert.ConvertCommand.help"]
+  fn_convert_ConvertCommand_fields["convert.ConvertCommand.fields"]
+  fn_convert_ConvertCommand_run["convert.ConvertCommand.run"]
+  fn_diagram_DiagramCommand_name["diagram.DiagramCommand.name"]
+  fn_diagram_DiagramCommand_usage["diagram.DiagramCommand.usage"]
+  fn_diagram_DiagramCommand_help["diagram.DiagramCommand.help"]
+  fn_diagram_DiagramCommand_fields["diagram.DiagramCommand.fields"]
+  fn_diagram_DiagramCommand_run["diagram.DiagramCommand.run"]
+  fn_init_InitCommand_name["init.InitCommand.name"]
+  fn_init_InitCommand_usage["init.InitCommand.usage"]
+  fn_init_InitCommand_help["init.InitCommand.help"]
+  fn_init_InitCommand_fields["init.InitCommand.fields"]
+  fn_init_InitCommand_run["init.InitCommand.run"]
   fn_mod_run["mod.run"]
   fn_mod_Cli_from_env["mod.Cli.from_env"]
   fn_mod_Cli_execute["mod.Cli.execute"]
@@ -837,6 +837,7 @@ flowchart LR
   fn_bash_BashLanguage_extensions["bash.BashLanguage.extensions"]
   fn_bash_BashLanguage_parse["bash.BashLanguage.parse"]
   fn_bash_text_at["bash.text_at"]
+  fn_bash_module_doc["bash.module_doc"]
   fn_bash_preceding_doc["bash.preceding_doc"]
   fn_bash_walk_functions["bash.walk_functions"]
   fn_bash_includes["bash.includes"]
@@ -1029,33 +1030,32 @@ flowchart LR
   fn_types_TypeRef_parse -->|calls| fn_attribute_Visibility_as_str
   fn_command_Context_load_config -->|calls| fn_parser_Parser_opt
   fn_command_Context_load_config -->|calls| fn_config_Config_load
-  fn_command_Context_output_path -->|calls| fn_command_Context_new
   fn_command_Context_output_path -->|calls| fn_type_resolver_TypeResolver_resolve
+  fn_command_Context_output_path -->|calls| fn_command_Context_new
   fn_command_Context_output_path -->|calls| fn_parser_Parser_opt
   fn_command_Context_prepare_output -->|calls| fn_symbol_table_SymbolTable_is_empty
   fn_command_Context_prepare_output -->|calls| fn_command_Context_new
   fn_command_Command_parse -->|calls| fn_command_parse_or_exit
-  fn_command_ConvertCommand_run -->|calls| fn_command_Command_parse
-  fn_command_ConvertCommand_run -->|calls| fn_command_Context_load_config
-  fn_command_ConvertCommand_run -->|calls| fn_command_Context_input_spec
-  fn_command_ConvertCommand_run -->|calls| fn_command_Context_new
-  fn_command_ConvertCommand_run -->|calls| fn_command_Context_output_path
-  fn_command_ConvertCommand_run -->|calls| fn_command_Context_prepare_output
-  fn_command_ConvertCommand_run -->|calls| fn_converter_Converter_files
-  fn_command_DiagramCommand_run -->|calls| fn_command_Command_parse
-  fn_command_DiagramCommand_run -->|calls| fn_command_Context_load_config
-  fn_command_DiagramCommand_run -->|calls| fn_parser_Parser_opt
-  fn_command_DiagramCommand_run -->|calls| fn_mod_usage_error
-  fn_command_DiagramCommand_run -->|calls| fn_command_Command_error_program
-  fn_command_DiagramCommand_run -->|calls| fn_command_Context_input_spec
-  fn_command_DiagramCommand_run -->|calls| fn_command_Context_new
-  fn_command_DiagramCommand_run -->|calls| fn_command_Context_output_path
-  fn_command_DiagramCommand_run -->|calls| fn_command_Context_prepare_output
-  fn_command_DiagramCommand_run -->|calls| fn_converter_Converter_diagram
-  fn_command_InitCommand_run -->|calls| fn_command_Command_parse
-  fn_command_InitCommand_run -->|calls| fn_node_NodeId_from
-  fn_command_InitCommand_run -->|calls| fn_command_Context_new
+  fn_command_Command_parse -->|calls| fn_command_Command_fields
+  fn_command_Command_parse -->|calls| fn_command_Command_usage
+  fn_command_Command_print_help -->|calls| fn_command_Command_help
+  fn_command_find -->|calls| fn_command_Command_name
   fn_command_parse_or_exit -->|calls| fn_command_Command_parse
+  fn_convert_ConvertCommand_run -->|calls| fn_command_Context_load_config
+  fn_convert_ConvertCommand_run -->|calls| fn_command_Context_input_spec
+  fn_convert_ConvertCommand_run -->|calls| fn_command_Context_output_path
+  fn_convert_ConvertCommand_run -->|calls| fn_command_Context_prepare_output
+  fn_convert_ConvertCommand_run -->|calls| fn_converter_Converter_files
+  fn_diagram_DiagramCommand_run -->|calls| fn_command_Context_load_config
+  fn_diagram_DiagramCommand_run -->|calls| fn_parser_Parser_opt
+  fn_diagram_DiagramCommand_run -->|calls| fn_mod_usage_error
+  fn_diagram_DiagramCommand_run -->|calls| fn_diagram_DiagramCommand_usage
+  fn_diagram_DiagramCommand_run -->|calls| fn_command_Command_error_program
+  fn_diagram_DiagramCommand_run -->|calls| fn_command_Context_input_spec
+  fn_diagram_DiagramCommand_run -->|calls| fn_command_Context_output_path
+  fn_diagram_DiagramCommand_run -->|calls| fn_command_Context_prepare_output
+  fn_diagram_DiagramCommand_run -->|calls| fn_converter_Converter_diagram
+  fn_init_InitCommand_run -->|calls| fn_node_NodeId_from
   fn_mod_run -->|calls| fn_mod_Cli_execute
   fn_mod_run -->|calls| fn_mod_Cli_from_env
   fn_mod_Cli_from_env -->|calls| fn_mermaid_collect
@@ -1204,9 +1204,11 @@ flowchart LR
   fn_call_graph_edges -->|calls| fn_symbol_table_SymbolTable_is_empty
   fn_dependency_dependencies -->|calls| fn_types_TypeRef_tokens
   fn_bash_BashLanguage_parse -->|calls| fn_tree_sitter_parse_bash
+  fn_bash_BashLanguage_parse -->|calls| fn_bash_module_doc
   fn_bash_BashLanguage_parse -->|calls| fn_bash_includes
   fn_bash_BashLanguage_parse -->|calls| fn_bash_walk_functions
   fn_bash_text_at -->|calls| fn_symbol_table_SymbolTable_get
+  fn_bash_module_doc -->|calls| fn_symbol_table_SymbolTable_is_empty
   fn_bash_preceding_doc -->|calls| fn_bash_text_at
   fn_bash_preceding_doc -->|calls| fn_symbol_table_SymbolTable_is_empty
   fn_bash_walk_functions -->|calls| fn_bash_text_at
@@ -1620,25 +1622,25 @@ flowchart LR
   fn_command_Command_parse["command.Command.parse"]
   fn_command_Command_error_program["command.Command.error_program"]
   fn_command_Command_print_help["command.Command.print_help"]
-  fn_command_ConvertCommand_name["command.ConvertCommand.name"]
-  fn_command_ConvertCommand_usage["command.ConvertCommand.usage"]
-  fn_command_ConvertCommand_help["command.ConvertCommand.help"]
-  fn_command_ConvertCommand_fields["command.ConvertCommand.fields"]
-  fn_command_ConvertCommand_run["command.ConvertCommand.run"]
-  fn_command_DiagramCommand_name["command.DiagramCommand.name"]
-  fn_command_DiagramCommand_usage["command.DiagramCommand.usage"]
-  fn_command_DiagramCommand_help["command.DiagramCommand.help"]
-  fn_command_DiagramCommand_fields["command.DiagramCommand.fields"]
-  fn_command_DiagramCommand_run["command.DiagramCommand.run"]
-  fn_command_InitCommand_name["command.InitCommand.name"]
-  fn_command_InitCommand_usage["command.InitCommand.usage"]
-  fn_command_InitCommand_help["command.InitCommand.help"]
-  fn_command_InitCommand_fields["command.InitCommand.fields"]
-  fn_command_InitCommand_run["command.InitCommand.run"]
   fn_command_all["command.all"]
   fn_command_find["command.find"]
   fn_command_kind_choices["command.kind_choices"]
   fn_command_parse_or_exit["command.parse_or_exit"]
+  fn_convert_ConvertCommand_name["convert.ConvertCommand.name"]
+  fn_convert_ConvertCommand_usage["convert.ConvertCommand.usage"]
+  fn_convert_ConvertCommand_help["convert.ConvertCommand.help"]
+  fn_convert_ConvertCommand_fields["convert.ConvertCommand.fields"]
+  fn_convert_ConvertCommand_run["convert.ConvertCommand.run"]
+  fn_diagram_DiagramCommand_name["diagram.DiagramCommand.name"]
+  fn_diagram_DiagramCommand_usage["diagram.DiagramCommand.usage"]
+  fn_diagram_DiagramCommand_help["diagram.DiagramCommand.help"]
+  fn_diagram_DiagramCommand_fields["diagram.DiagramCommand.fields"]
+  fn_diagram_DiagramCommand_run["diagram.DiagramCommand.run"]
+  fn_init_InitCommand_name["init.InitCommand.name"]
+  fn_init_InitCommand_usage["init.InitCommand.usage"]
+  fn_init_InitCommand_help["init.InitCommand.help"]
+  fn_init_InitCommand_fields["init.InitCommand.fields"]
+  fn_init_InitCommand_run["init.InitCommand.run"]
   fn_mod_run["mod.run"]
   fn_mod_Cli_from_env["mod.Cli.from_env"]
   fn_mod_Cli_execute["mod.Cli.execute"]
@@ -1734,6 +1736,7 @@ flowchart LR
   fn_bash_BashLanguage_extensions["bash.BashLanguage.extensions"]
   fn_bash_BashLanguage_parse["bash.BashLanguage.parse"]
   fn_bash_text_at["bash.text_at"]
+  fn_bash_module_doc["bash.module_doc"]
   fn_bash_preceding_doc["bash.preceding_doc"]
   fn_bash_walk_functions["bash.walk_functions"]
   fn_bash_includes["bash.includes"]
@@ -1926,33 +1929,32 @@ flowchart LR
   fn_attribute_Visibility_as_str -->|called by| fn_types_TypeRef_parse
   fn_parser_Parser_opt -->|called by| fn_command_Context_load_config
   fn_config_Config_load -->|called by| fn_command_Context_load_config
-  fn_command_Context_new -->|called by| fn_command_Context_output_path
   fn_type_resolver_TypeResolver_resolve -->|called by| fn_command_Context_output_path
+  fn_command_Context_new -->|called by| fn_command_Context_output_path
   fn_parser_Parser_opt -->|called by| fn_command_Context_output_path
   fn_symbol_table_SymbolTable_is_empty -->|called by| fn_command_Context_prepare_output
   fn_command_Context_new -->|called by| fn_command_Context_prepare_output
   fn_command_parse_or_exit -->|called by| fn_command_Command_parse
-  fn_command_Command_parse -->|called by| fn_command_ConvertCommand_run
-  fn_command_Context_load_config -->|called by| fn_command_ConvertCommand_run
-  fn_command_Context_input_spec -->|called by| fn_command_ConvertCommand_run
-  fn_command_Context_new -->|called by| fn_command_ConvertCommand_run
-  fn_command_Context_output_path -->|called by| fn_command_ConvertCommand_run
-  fn_command_Context_prepare_output -->|called by| fn_command_ConvertCommand_run
-  fn_converter_Converter_files -->|called by| fn_command_ConvertCommand_run
-  fn_command_Command_parse -->|called by| fn_command_DiagramCommand_run
-  fn_command_Context_load_config -->|called by| fn_command_DiagramCommand_run
-  fn_parser_Parser_opt -->|called by| fn_command_DiagramCommand_run
-  fn_mod_usage_error -->|called by| fn_command_DiagramCommand_run
-  fn_command_Command_error_program -->|called by| fn_command_DiagramCommand_run
-  fn_command_Context_input_spec -->|called by| fn_command_DiagramCommand_run
-  fn_command_Context_new -->|called by| fn_command_DiagramCommand_run
-  fn_command_Context_output_path -->|called by| fn_command_DiagramCommand_run
-  fn_command_Context_prepare_output -->|called by| fn_command_DiagramCommand_run
-  fn_converter_Converter_diagram -->|called by| fn_command_DiagramCommand_run
-  fn_command_Command_parse -->|called by| fn_command_InitCommand_run
-  fn_node_NodeId_from -->|called by| fn_command_InitCommand_run
-  fn_command_Context_new -->|called by| fn_command_InitCommand_run
+  fn_command_Command_fields -->|called by| fn_command_Command_parse
+  fn_command_Command_usage -->|called by| fn_command_Command_parse
+  fn_command_Command_help -->|called by| fn_command_Command_print_help
+  fn_command_Command_name -->|called by| fn_command_find
   fn_command_Command_parse -->|called by| fn_command_parse_or_exit
+  fn_command_Context_load_config -->|called by| fn_convert_ConvertCommand_run
+  fn_command_Context_input_spec -->|called by| fn_convert_ConvertCommand_run
+  fn_command_Context_output_path -->|called by| fn_convert_ConvertCommand_run
+  fn_command_Context_prepare_output -->|called by| fn_convert_ConvertCommand_run
+  fn_converter_Converter_files -->|called by| fn_convert_ConvertCommand_run
+  fn_command_Context_load_config -->|called by| fn_diagram_DiagramCommand_run
+  fn_parser_Parser_opt -->|called by| fn_diagram_DiagramCommand_run
+  fn_mod_usage_error -->|called by| fn_diagram_DiagramCommand_run
+  fn_diagram_DiagramCommand_usage -->|called by| fn_diagram_DiagramCommand_run
+  fn_command_Command_error_program -->|called by| fn_diagram_DiagramCommand_run
+  fn_command_Context_input_spec -->|called by| fn_diagram_DiagramCommand_run
+  fn_command_Context_output_path -->|called by| fn_diagram_DiagramCommand_run
+  fn_command_Context_prepare_output -->|called by| fn_diagram_DiagramCommand_run
+  fn_converter_Converter_diagram -->|called by| fn_diagram_DiagramCommand_run
+  fn_node_NodeId_from -->|called by| fn_init_InitCommand_run
   fn_mod_Cli_execute -->|called by| fn_mod_run
   fn_mod_Cli_from_env -->|called by| fn_mod_run
   fn_mermaid_collect -->|called by| fn_mod_Cli_from_env
@@ -2101,9 +2103,11 @@ flowchart LR
   fn_symbol_table_SymbolTable_is_empty -->|called by| fn_call_graph_edges
   fn_types_TypeRef_tokens -->|called by| fn_dependency_dependencies
   fn_tree_sitter_parse_bash -->|called by| fn_bash_BashLanguage_parse
+  fn_bash_module_doc -->|called by| fn_bash_BashLanguage_parse
   fn_bash_includes -->|called by| fn_bash_BashLanguage_parse
   fn_bash_walk_functions -->|called by| fn_bash_BashLanguage_parse
   fn_symbol_table_SymbolTable_get -->|called by| fn_bash_text_at
+  fn_symbol_table_SymbolTable_is_empty -->|called by| fn_bash_module_doc
   fn_bash_text_at -->|called by| fn_bash_preceding_doc
   fn_symbol_table_SymbolTable_is_empty -->|called by| fn_bash_preceding_doc
   fn_bash_text_at -->|called by| fn_bash_walk_functions
@@ -2498,6 +2502,10 @@ flowchart LR
   file__home_phng_Code_Wheels_Dozen_src_ast_node_rs["node.rs"]
   file__home_phng_Code_Wheels_Dozen_src_ast_types_rs["types.rs"]
   file__home_phng_Code_Wheels_Dozen_src_cli_command_rs["command.rs"]
+  file__home_phng_Code_Wheels_Dozen_src_cli_commands_convert_rs["convert.rs"]
+  file__home_phng_Code_Wheels_Dozen_src_cli_commands_diagram_rs["diagram.rs"]
+  file__home_phng_Code_Wheels_Dozen_src_cli_commands_init_rs["init.rs"]
+  file__home_phng_Code_Wheels_Dozen_src_cli_commands_mod_rs["mod.rs"]
   file__home_phng_Code_Wheels_Dozen_src_cli_mod_rs["mod.rs"]
   file__home_phng_Code_Wheels_Dozen_src_cli_parser_rs["parser.rs"]
   file__home_phng_Code_Wheels_Dozen_src_cli_scaffold_rs["scaffold.rs"]
@@ -2541,41 +2549,46 @@ flowchart LR
   ext_7["std::process::ExitCode"]
   ext_8["anyhow::Result"]
   ext_9["super::"]
-  ext_10["std::path::PathBuf"]
-  ext_11["anyhow::"]
-  ext_12["std::collections::HashMap"]
-  ext_13["crate::model::"]
-  ext_14["crate::documentation::DocText"]
-  ext_15["crate::model::Doc"]
-  ext_16["crate::documentation::split_lines"]
-  ext_17["encoding_rs::Encoding"]
-  ext_18["crate::model::Entity"]
-  ext_19["std::collections::HashSet"]
-  ext_20["glob::"]
-  ext_21["crate::ast::TypeRef"]
-  ext_22["crate::documentation::DOC_PARSER"]
-  ext_23["crate::lang::Language"]
-  ext_24["crate::ast::Visibility"]
-  ext_25["crate::documentation::"]
-  ext_26["std::path::Path"]
-  ext_27["crate::lang::"]
-  ext_28["ast"]
-  ext_29["cli"]
-  ext_30["documentation"]
-  ext_31["engine"]
-  ext_32["graph"]
-  ext_33["lang"]
-  ext_34["model"]
-  ext_35["renderer"]
-  ext_36["semantic"]
-  ext_37["pub use crate::lang::"]
-  ext_38["std::collections::"]
-  ext_39["anyhow::bail"]
-  ext_40["crate::semantic::SymbolTable"]
-  ext_41["pub use symbol_table::SymbolTable"]
-  ext_42["pub use type_resolver::TypeResolver"]
-  ext_43["crate::ast::NodeId"]
-  ext_44["crate::ast::"]
+  ext_10["super::super::usage_error"]
+  ext_11["std::path::PathBuf"]
+  ext_12["pub use convert::ConvertCommand"]
+  ext_13["pub use diagram::DiagramCommand"]
+  ext_14["pub use init::InitCommand"]
+  ext_15["commands"]
+  ext_16["anyhow::"]
+  ext_17["std::collections::HashMap"]
+  ext_18["crate::model::"]
+  ext_19["crate::documentation::DocText"]
+  ext_20["crate::model::Doc"]
+  ext_21["crate::documentation::split_lines"]
+  ext_22["encoding_rs::Encoding"]
+  ext_23["crate::model::Entity"]
+  ext_24["std::collections::HashSet"]
+  ext_25["glob::"]
+  ext_26["crate::ast::TypeRef"]
+  ext_27["crate::documentation::DOC_PARSER"]
+  ext_28["crate::lang::Language"]
+  ext_29["crate::ast::Visibility"]
+  ext_30["crate::documentation::"]
+  ext_31["std::path::Path"]
+  ext_32["crate::lang::"]
+  ext_33["ast"]
+  ext_34["cli"]
+  ext_35["documentation"]
+  ext_36["engine"]
+  ext_37["graph"]
+  ext_38["lang"]
+  ext_39["model"]
+  ext_40["renderer"]
+  ext_41["semantic"]
+  ext_42["pub use crate::lang::"]
+  ext_43["std::collections::"]
+  ext_44["anyhow::bail"]
+  ext_45["crate::semantic::SymbolTable"]
+  ext_46["pub use symbol_table::SymbolTable"]
+  ext_47["pub use type_resolver::TypeResolver"]
+  ext_48["crate::ast::NodeId"]
+  ext_49["crate::ast::"]
   file__home_phng_Code_Wheels_Dozen_src_ast_attribute_rs --> ext_0
   file__home_phng_Code_Wheels_Dozen_src_ast_mod_rs --> file__home_phng_Code_Wheels_Dozen_src_ast_attribute_rs
   file__home_phng_Code_Wheels_Dozen_src_ast_mod_rs --> file__home_phng_Code_Wheels_Dozen_src_ast_node_rs
@@ -2590,142 +2603,166 @@ flowchart LR
   file__home_phng_Code_Wheels_Dozen_src_cli_command_rs --> ext_7
   file__home_phng_Code_Wheels_Dozen_src_cli_command_rs --> ext_8
   file__home_phng_Code_Wheels_Dozen_src_cli_command_rs --> file__home_phng_Code_Wheels_Dozen_src_cli_parser_rs
-  file__home_phng_Code_Wheels_Dozen_src_cli_command_rs --> file__home_phng_Code_Wheels_Dozen_src_cli_scaffold_rs
   file__home_phng_Code_Wheels_Dozen_src_cli_command_rs --> file__home_phng_Code_Wheels_Dozen_src_engine_config_rs
-  file__home_phng_Code_Wheels_Dozen_src_cli_command_rs --> file__home_phng_Code_Wheels_Dozen_src_engine_converter_rs
-  file__home_phng_Code_Wheels_Dozen_src_cli_command_rs --> file__home_phng_Code_Wheels_Dozen_src_engine_files_rs
   file__home_phng_Code_Wheels_Dozen_src_cli_command_rs --> file__home_phng_Code_Wheels_Dozen_src_renderer_mermaid_rs
   file__home_phng_Code_Wheels_Dozen_src_cli_command_rs --> ext_9
+  file__home_phng_Code_Wheels_Dozen_src_cli_commands_convert_rs --> ext_7
+  file__home_phng_Code_Wheels_Dozen_src_cli_commands_convert_rs --> ext_8
+  file__home_phng_Code_Wheels_Dozen_src_cli_commands_convert_rs --> file__home_phng_Code_Wheels_Dozen_src_cli_command_rs
+  file__home_phng_Code_Wheels_Dozen_src_cli_commands_convert_rs --> file__home_phng_Code_Wheels_Dozen_src_cli_parser_rs
+  file__home_phng_Code_Wheels_Dozen_src_cli_commands_convert_rs --> file__home_phng_Code_Wheels_Dozen_src_engine_converter_rs
+  file__home_phng_Code_Wheels_Dozen_src_cli_commands_convert_rs --> file__home_phng_Code_Wheels_Dozen_src_engine_files_rs
+  file__home_phng_Code_Wheels_Dozen_src_cli_commands_diagram_rs --> ext_7
+  file__home_phng_Code_Wheels_Dozen_src_cli_commands_diagram_rs --> ext_8
+  file__home_phng_Code_Wheels_Dozen_src_cli_commands_diagram_rs --> file__home_phng_Code_Wheels_Dozen_src_cli_command_rs
+  file__home_phng_Code_Wheels_Dozen_src_cli_commands_diagram_rs --> file__home_phng_Code_Wheels_Dozen_src_cli_parser_rs
+  file__home_phng_Code_Wheels_Dozen_src_cli_commands_diagram_rs --> file__home_phng_Code_Wheels_Dozen_src_engine_converter_rs
+  file__home_phng_Code_Wheels_Dozen_src_cli_commands_diagram_rs --> file__home_phng_Code_Wheels_Dozen_src_engine_files_rs
+  file__home_phng_Code_Wheels_Dozen_src_cli_commands_diagram_rs --> file__home_phng_Code_Wheels_Dozen_src_renderer_mermaid_rs
+  file__home_phng_Code_Wheels_Dozen_src_cli_commands_diagram_rs --> ext_10
+  file__home_phng_Code_Wheels_Dozen_src_cli_commands_init_rs --> ext_11
+  file__home_phng_Code_Wheels_Dozen_src_cli_commands_init_rs --> ext_7
+  file__home_phng_Code_Wheels_Dozen_src_cli_commands_init_rs --> ext_8
+  file__home_phng_Code_Wheels_Dozen_src_cli_commands_init_rs --> file__home_phng_Code_Wheels_Dozen_src_cli_command_rs
+  file__home_phng_Code_Wheels_Dozen_src_cli_commands_init_rs --> file__home_phng_Code_Wheels_Dozen_src_cli_parser_rs
+  file__home_phng_Code_Wheels_Dozen_src_cli_commands_init_rs --> file__home_phng_Code_Wheels_Dozen_src_cli_scaffold_rs
+  file__home_phng_Code_Wheels_Dozen_src_cli_commands_mod_rs --> file__home_phng_Code_Wheels_Dozen_src_cli_commands_convert_rs
+  file__home_phng_Code_Wheels_Dozen_src_cli_commands_mod_rs --> file__home_phng_Code_Wheels_Dozen_src_cli_commands_diagram_rs
+  file__home_phng_Code_Wheels_Dozen_src_cli_commands_mod_rs --> file__home_phng_Code_Wheels_Dozen_src_cli_commands_init_rs
+  file__home_phng_Code_Wheels_Dozen_src_cli_commands_mod_rs --> ext_12
+  file__home_phng_Code_Wheels_Dozen_src_cli_commands_mod_rs --> ext_13
+  file__home_phng_Code_Wheels_Dozen_src_cli_commands_mod_rs --> ext_14
   file__home_phng_Code_Wheels_Dozen_src_cli_mod_rs --> file__home_phng_Code_Wheels_Dozen_src_cli_command_rs
+  file__home_phng_Code_Wheels_Dozen_src_cli_mod_rs --> ext_15
   file__home_phng_Code_Wheels_Dozen_src_cli_mod_rs --> file__home_phng_Code_Wheels_Dozen_src_cli_parser_rs
   file__home_phng_Code_Wheels_Dozen_src_cli_mod_rs --> file__home_phng_Code_Wheels_Dozen_src_cli_scaffold_rs
-  file__home_phng_Code_Wheels_Dozen_src_cli_mod_rs --> ext_10
-  file__home_phng_Code_Wheels_Dozen_src_cli_mod_rs --> ext_7
   file__home_phng_Code_Wheels_Dozen_src_cli_mod_rs --> ext_11
-  file__home_phng_Code_Wheels_Dozen_src_cli_parser_rs --> ext_12
+  file__home_phng_Code_Wheels_Dozen_src_cli_mod_rs --> ext_7
+  file__home_phng_Code_Wheels_Dozen_src_cli_mod_rs --> ext_16
+  file__home_phng_Code_Wheels_Dozen_src_cli_parser_rs --> ext_17
   file__home_phng_Code_Wheels_Dozen_src_cli_parser_rs --> ext_0
   file__home_phng_Code_Wheels_Dozen_src_cli_scaffold_rs --> ext_6
-  file__home_phng_Code_Wheels_Dozen_src_cli_scaffold_rs --> ext_11
+  file__home_phng_Code_Wheels_Dozen_src_cli_scaffold_rs --> ext_16
   file__home_phng_Code_Wheels_Dozen_src_cli_scaffold_rs --> file__home_phng_Code_Wheels_Dozen_src_engine_config_rs
   file__home_phng_Code_Wheels_Dozen_src_documentation_mod_rs --> ext_4
   file__home_phng_Code_Wheels_Dozen_src_documentation_mod_rs --> ext_5
-  file__home_phng_Code_Wheels_Dozen_src_documentation_mod_rs --> ext_13
+  file__home_phng_Code_Wheels_Dozen_src_documentation_mod_rs --> ext_18
   file__home_phng_Code_Wheels_Dozen_src_documentation_mod_rs --> ext_0
-  file__home_phng_Code_Wheels_Dozen_src_documentation_parser_rs --> ext_14
+  file__home_phng_Code_Wheels_Dozen_src_documentation_parser_rs --> ext_19
   file__home_phng_Code_Wheels_Dozen_src_documentation_parser_rs --> file__home_phng_Code_Wheels_Dozen_src_documentation_tags_rs
-  file__home_phng_Code_Wheels_Dozen_src_documentation_parser_rs --> ext_15
+  file__home_phng_Code_Wheels_Dozen_src_documentation_parser_rs --> ext_20
   file__home_phng_Code_Wheels_Dozen_src_documentation_parser_rs --> ext_0
   file__home_phng_Code_Wheels_Dozen_src_documentation_tags_rs --> ext_4
   file__home_phng_Code_Wheels_Dozen_src_documentation_tags_rs --> ext_5
-  file__home_phng_Code_Wheels_Dozen_src_documentation_tags_rs --> ext_13
+  file__home_phng_Code_Wheels_Dozen_src_documentation_tags_rs --> ext_18
   file__home_phng_Code_Wheels_Dozen_src_engine_config_rs --> ext_6
   file__home_phng_Code_Wheels_Dozen_src_engine_config_rs --> ext_4
-  file__home_phng_Code_Wheels_Dozen_src_engine_config_rs --> ext_11
-  file__home_phng_Code_Wheels_Dozen_src_engine_config_rs --> ext_5
   file__home_phng_Code_Wheels_Dozen_src_engine_config_rs --> ext_16
+  file__home_phng_Code_Wheels_Dozen_src_engine_config_rs --> ext_5
+  file__home_phng_Code_Wheels_Dozen_src_engine_config_rs --> ext_21
   file__home_phng_Code_Wheels_Dozen_src_engine_config_rs --> ext_0
   file__home_phng_Code_Wheels_Dozen_src_engine_converter_rs --> ext_6
-  file__home_phng_Code_Wheels_Dozen_src_engine_converter_rs --> ext_11
-  file__home_phng_Code_Wheels_Dozen_src_engine_converter_rs --> ext_17
+  file__home_phng_Code_Wheels_Dozen_src_engine_converter_rs --> ext_16
+  file__home_phng_Code_Wheels_Dozen_src_engine_converter_rs --> ext_22
   file__home_phng_Code_Wheels_Dozen_src_engine_converter_rs --> file__home_phng_Code_Wheels_Dozen_src_engine_config_rs
   file__home_phng_Code_Wheels_Dozen_src_engine_converter_rs --> file__home_phng_Code_Wheels_Dozen_src_lang_registry_rs
-  file__home_phng_Code_Wheels_Dozen_src_engine_converter_rs --> ext_18
+  file__home_phng_Code_Wheels_Dozen_src_engine_converter_rs --> ext_23
   file__home_phng_Code_Wheels_Dozen_src_engine_converter_rs --> file__home_phng_Code_Wheels_Dozen_src_renderer_markdown_rs
   file__home_phng_Code_Wheels_Dozen_src_engine_converter_rs --> file__home_phng_Code_Wheels_Dozen_src_renderer_mermaid_rs
-  file__home_phng_Code_Wheels_Dozen_src_engine_files_rs --> ext_19
+  file__home_phng_Code_Wheels_Dozen_src_engine_files_rs --> ext_24
   file__home_phng_Code_Wheels_Dozen_src_engine_files_rs --> ext_6
-  file__home_phng_Code_Wheels_Dozen_src_engine_files_rs --> ext_20
+  file__home_phng_Code_Wheels_Dozen_src_engine_files_rs --> ext_25
   file__home_phng_Code_Wheels_Dozen_src_engine_files_rs --> file__home_phng_Code_Wheels_Dozen_src_lang_registry_rs
   file__home_phng_Code_Wheels_Dozen_src_engine_files_rs --> ext_0
   file__home_phng_Code_Wheels_Dozen_src_engine_mod_rs --> file__home_phng_Code_Wheels_Dozen_src_engine_config_rs
   file__home_phng_Code_Wheels_Dozen_src_engine_mod_rs --> file__home_phng_Code_Wheels_Dozen_src_engine_converter_rs
   file__home_phng_Code_Wheels_Dozen_src_engine_mod_rs --> file__home_phng_Code_Wheels_Dozen_src_engine_files_rs
-  file__home_phng_Code_Wheels_Dozen_src_graph_call_graph_rs --> ext_18
-  file__home_phng_Code_Wheels_Dozen_src_graph_dependency_rs --> ext_21
-  file__home_phng_Code_Wheels_Dozen_src_graph_dependency_rs --> ext_18
-  file__home_phng_Code_Wheels_Dozen_src_graph_inheritance_rs --> ext_18
+  file__home_phng_Code_Wheels_Dozen_src_graph_call_graph_rs --> ext_23
+  file__home_phng_Code_Wheels_Dozen_src_graph_dependency_rs --> ext_26
+  file__home_phng_Code_Wheels_Dozen_src_graph_dependency_rs --> ext_23
+  file__home_phng_Code_Wheels_Dozen_src_graph_inheritance_rs --> ext_23
   file__home_phng_Code_Wheels_Dozen_src_graph_mod_rs --> file__home_phng_Code_Wheels_Dozen_src_graph_call_graph_rs
   file__home_phng_Code_Wheels_Dozen_src_graph_mod_rs --> file__home_phng_Code_Wheels_Dozen_src_graph_dependency_rs
   file__home_phng_Code_Wheels_Dozen_src_graph_mod_rs --> file__home_phng_Code_Wheels_Dozen_src_graph_inheritance_rs
   file__home_phng_Code_Wheels_Dozen_src_lang_bash_rs --> file__home_phng_Code_Wheels_Dozen_src_parser_tree_sitter_rs
-  file__home_phng_Code_Wheels_Dozen_src_lang_bash_rs --> ext_22
-  file__home_phng_Code_Wheels_Dozen_src_lang_bash_rs --> ext_23
-  file__home_phng_Code_Wheels_Dozen_src_lang_bash_rs --> ext_13
+  file__home_phng_Code_Wheels_Dozen_src_lang_bash_rs --> ext_27
+  file__home_phng_Code_Wheels_Dozen_src_lang_bash_rs --> ext_28
+  file__home_phng_Code_Wheels_Dozen_src_lang_bash_rs --> ext_18
   file__home_phng_Code_Wheels_Dozen_src_lang_bash_rs --> ext_0
-  file__home_phng_Code_Wheels_Dozen_src_lang_cpp_rs --> ext_12
+  file__home_phng_Code_Wheels_Dozen_src_lang_cpp_rs --> ext_17
   file__home_phng_Code_Wheels_Dozen_src_lang_cpp_rs --> file__home_phng_Code_Wheels_Dozen_src_parser_tree_sitter_rs
-  file__home_phng_Code_Wheels_Dozen_src_lang_cpp_rs --> ext_24
-  file__home_phng_Code_Wheels_Dozen_src_lang_cpp_rs --> ext_22
-  file__home_phng_Code_Wheels_Dozen_src_lang_cpp_rs --> ext_23
-  file__home_phng_Code_Wheels_Dozen_src_lang_cpp_rs --> ext_13
+  file__home_phng_Code_Wheels_Dozen_src_lang_cpp_rs --> ext_29
+  file__home_phng_Code_Wheels_Dozen_src_lang_cpp_rs --> ext_27
+  file__home_phng_Code_Wheels_Dozen_src_lang_cpp_rs --> ext_28
+  file__home_phng_Code_Wheels_Dozen_src_lang_cpp_rs --> ext_18
   file__home_phng_Code_Wheels_Dozen_src_lang_cpp_rs --> ext_0
   file__home_phng_Code_Wheels_Dozen_src_lang_mod_rs --> ext_4
   file__home_phng_Code_Wheels_Dozen_src_lang_mod_rs --> ext_5
-  file__home_phng_Code_Wheels_Dozen_src_lang_mod_rs --> ext_18
+  file__home_phng_Code_Wheels_Dozen_src_lang_mod_rs --> ext_23
   file__home_phng_Code_Wheels_Dozen_src_lang_mod_rs --> file__home_phng_Code_Wheels_Dozen_src_lang_bash_rs
   file__home_phng_Code_Wheels_Dozen_src_lang_mod_rs --> file__home_phng_Code_Wheels_Dozen_src_lang_cpp_rs
   file__home_phng_Code_Wheels_Dozen_src_lang_mod_rs --> file__home_phng_Code_Wheels_Dozen_src_lang_python_rs
   file__home_phng_Code_Wheels_Dozen_src_lang_mod_rs --> file__home_phng_Code_Wheels_Dozen_src_lang_registry_rs
   file__home_phng_Code_Wheels_Dozen_src_lang_mod_rs --> file__home_phng_Code_Wheels_Dozen_src_lang_rust_rs
   file__home_phng_Code_Wheels_Dozen_src_lang_mod_rs --> ext_0
-  file__home_phng_Code_Wheels_Dozen_src_lang_python_rs --> ext_12
+  file__home_phng_Code_Wheels_Dozen_src_lang_python_rs --> ext_17
   file__home_phng_Code_Wheels_Dozen_src_lang_python_rs --> file__home_phng_Code_Wheels_Dozen_src_parser_tree_sitter_rs
-  file__home_phng_Code_Wheels_Dozen_src_lang_python_rs --> ext_24
-  file__home_phng_Code_Wheels_Dozen_src_lang_python_rs --> ext_25
-  file__home_phng_Code_Wheels_Dozen_src_lang_python_rs --> ext_23
-  file__home_phng_Code_Wheels_Dozen_src_lang_python_rs --> ext_13
+  file__home_phng_Code_Wheels_Dozen_src_lang_python_rs --> ext_29
+  file__home_phng_Code_Wheels_Dozen_src_lang_python_rs --> ext_30
+  file__home_phng_Code_Wheels_Dozen_src_lang_python_rs --> ext_28
+  file__home_phng_Code_Wheels_Dozen_src_lang_python_rs --> ext_18
   file__home_phng_Code_Wheels_Dozen_src_lang_python_rs --> ext_0
-  file__home_phng_Code_Wheels_Dozen_src_lang_registry_rs --> ext_26
-  file__home_phng_Code_Wheels_Dozen_src_lang_registry_rs --> ext_27
-  file__home_phng_Code_Wheels_Dozen_src_lang_rust_rs --> ext_12
+  file__home_phng_Code_Wheels_Dozen_src_lang_registry_rs --> ext_31
+  file__home_phng_Code_Wheels_Dozen_src_lang_registry_rs --> ext_32
+  file__home_phng_Code_Wheels_Dozen_src_lang_rust_rs --> ext_17
   file__home_phng_Code_Wheels_Dozen_src_lang_rust_rs --> file__home_phng_Code_Wheels_Dozen_src_parser_tree_sitter_rs
-  file__home_phng_Code_Wheels_Dozen_src_lang_rust_rs --> ext_24
-  file__home_phng_Code_Wheels_Dozen_src_lang_rust_rs --> ext_22
-  file__home_phng_Code_Wheels_Dozen_src_lang_rust_rs --> ext_23
-  file__home_phng_Code_Wheels_Dozen_src_lang_rust_rs --> ext_13
+  file__home_phng_Code_Wheels_Dozen_src_lang_rust_rs --> ext_29
+  file__home_phng_Code_Wheels_Dozen_src_lang_rust_rs --> ext_27
+  file__home_phng_Code_Wheels_Dozen_src_lang_rust_rs --> ext_28
+  file__home_phng_Code_Wheels_Dozen_src_lang_rust_rs --> ext_18
   file__home_phng_Code_Wheels_Dozen_src_lang_rust_rs --> ext_0
-  file__home_phng_Code_Wheels_Dozen_src_lib_rs --> ext_28
-  file__home_phng_Code_Wheels_Dozen_src_lib_rs --> ext_29
-  file__home_phng_Code_Wheels_Dozen_src_lib_rs --> ext_30
-  file__home_phng_Code_Wheels_Dozen_src_lib_rs --> ext_31
-  file__home_phng_Code_Wheels_Dozen_src_lib_rs --> ext_32
   file__home_phng_Code_Wheels_Dozen_src_lib_rs --> ext_33
   file__home_phng_Code_Wheels_Dozen_src_lib_rs --> ext_34
-  file__home_phng_Code_Wheels_Dozen_src_lib_rs --> file__home_phng_Code_Wheels_Dozen_src_cli_parser_rs
   file__home_phng_Code_Wheels_Dozen_src_lib_rs --> ext_35
   file__home_phng_Code_Wheels_Dozen_src_lib_rs --> ext_36
+  file__home_phng_Code_Wheels_Dozen_src_lib_rs --> ext_37
+  file__home_phng_Code_Wheels_Dozen_src_lib_rs --> ext_38
+  file__home_phng_Code_Wheels_Dozen_src_lib_rs --> ext_39
+  file__home_phng_Code_Wheels_Dozen_src_lib_rs --> file__home_phng_Code_Wheels_Dozen_src_cli_parser_rs
+  file__home_phng_Code_Wheels_Dozen_src_lib_rs --> ext_40
+  file__home_phng_Code_Wheels_Dozen_src_lib_rs --> ext_41
   file__home_phng_Code_Wheels_Dozen_src_main_rs --> ext_7
-  file__home_phng_Code_Wheels_Dozen_src_model_mod_rs --> ext_24
+  file__home_phng_Code_Wheels_Dozen_src_model_mod_rs --> ext_29
   file__home_phng_Code_Wheels_Dozen_src_parser_mod_rs --> file__home_phng_Code_Wheels_Dozen_src_parser_tree_sitter_rs
-  file__home_phng_Code_Wheels_Dozen_src_parser_mod_rs --> ext_37
+  file__home_phng_Code_Wheels_Dozen_src_parser_mod_rs --> ext_42
+  file__home_phng_Code_Wheels_Dozen_src_parser_tree_sitter_rs --> ext_28
   file__home_phng_Code_Wheels_Dozen_src_parser_tree_sitter_rs --> ext_23
-  file__home_phng_Code_Wheels_Dozen_src_parser_tree_sitter_rs --> ext_18
-  file__home_phng_Code_Wheels_Dozen_src_renderer_markdown_rs --> ext_18
+  file__home_phng_Code_Wheels_Dozen_src_renderer_markdown_rs --> ext_23
   file__home_phng_Code_Wheels_Dozen_src_renderer_markdown_rs --> file__home_phng_Code_Wheels_Dozen_src_renderer_reference_rs
   file__home_phng_Code_Wheels_Dozen_src_renderer_markdown_rs --> ext_0
-  file__home_phng_Code_Wheels_Dozen_src_renderer_mermaid_rs --> ext_38
-  file__home_phng_Code_Wheels_Dozen_src_renderer_mermaid_rs --> ext_26
+  file__home_phng_Code_Wheels_Dozen_src_renderer_mermaid_rs --> ext_43
+  file__home_phng_Code_Wheels_Dozen_src_renderer_mermaid_rs --> ext_31
   file__home_phng_Code_Wheels_Dozen_src_renderer_mermaid_rs --> ext_4
-  file__home_phng_Code_Wheels_Dozen_src_renderer_mermaid_rs --> ext_39
+  file__home_phng_Code_Wheels_Dozen_src_renderer_mermaid_rs --> ext_44
   file__home_phng_Code_Wheels_Dozen_src_renderer_mermaid_rs --> ext_5
-  file__home_phng_Code_Wheels_Dozen_src_renderer_mermaid_rs --> ext_13
+  file__home_phng_Code_Wheels_Dozen_src_renderer_mermaid_rs --> ext_18
   file__home_phng_Code_Wheels_Dozen_src_renderer_mod_rs --> file__home_phng_Code_Wheels_Dozen_src_renderer_markdown_rs
   file__home_phng_Code_Wheels_Dozen_src_renderer_mod_rs --> file__home_phng_Code_Wheels_Dozen_src_renderer_mermaid_rs
   file__home_phng_Code_Wheels_Dozen_src_renderer_mod_rs --> file__home_phng_Code_Wheels_Dozen_src_renderer_reference_rs
-  file__home_phng_Code_Wheels_Dozen_src_renderer_reference_rs --> ext_13
+  file__home_phng_Code_Wheels_Dozen_src_renderer_reference_rs --> ext_18
   file__home_phng_Code_Wheels_Dozen_src_renderer_reference_rs --> file__home_phng_Code_Wheels_Dozen_src_renderer_markdown_rs
-  file__home_phng_Code_Wheels_Dozen_src_semantic_analyzer_rs --> ext_18
-  file__home_phng_Code_Wheels_Dozen_src_semantic_analyzer_rs --> ext_40
+  file__home_phng_Code_Wheels_Dozen_src_semantic_analyzer_rs --> ext_23
+  file__home_phng_Code_Wheels_Dozen_src_semantic_analyzer_rs --> ext_45
   file__home_phng_Code_Wheels_Dozen_src_semantic_mod_rs --> file__home_phng_Code_Wheels_Dozen_src_semantic_analyzer_rs
   file__home_phng_Code_Wheels_Dozen_src_semantic_mod_rs --> file__home_phng_Code_Wheels_Dozen_src_semantic_symbol_table_rs
   file__home_phng_Code_Wheels_Dozen_src_semantic_mod_rs --> file__home_phng_Code_Wheels_Dozen_src_semantic_type_resolver_rs
-  file__home_phng_Code_Wheels_Dozen_src_semantic_mod_rs --> ext_41
-  file__home_phng_Code_Wheels_Dozen_src_semantic_mod_rs --> ext_42
-  file__home_phng_Code_Wheels_Dozen_src_semantic_symbol_table_rs --> ext_12
-  file__home_phng_Code_Wheels_Dozen_src_semantic_symbol_table_rs --> ext_43
-  file__home_phng_Code_Wheels_Dozen_src_semantic_symbol_table_rs --> ext_18
-  file__home_phng_Code_Wheels_Dozen_src_semantic_type_resolver_rs --> ext_44
-  file__home_phng_Code_Wheels_Dozen_src_semantic_type_resolver_rs --> ext_40
+  file__home_phng_Code_Wheels_Dozen_src_semantic_mod_rs --> ext_46
+  file__home_phng_Code_Wheels_Dozen_src_semantic_mod_rs --> ext_47
+  file__home_phng_Code_Wheels_Dozen_src_semantic_symbol_table_rs --> ext_17
+  file__home_phng_Code_Wheels_Dozen_src_semantic_symbol_table_rs --> ext_48
+  file__home_phng_Code_Wheels_Dozen_src_semantic_symbol_table_rs --> ext_23
+  file__home_phng_Code_Wheels_Dozen_src_semantic_type_resolver_rs --> ext_49
+  file__home_phng_Code_Wheels_Dozen_src_semantic_type_resolver_rs --> ext_45
 ```
 
 ## Directory Diagram
@@ -2735,18 +2772,22 @@ flowchart LR
   dir_0["/home/phng/Code/Wheels/Dozen/src"]
   dir_1["/home/phng/Code/Wheels/Dozen/src/ast"]
   dir_2["/home/phng/Code/Wheels/Dozen/src/cli"]
-  dir_3["/home/phng/Code/Wheels/Dozen/src/documentation"]
-  dir_4["/home/phng/Code/Wheels/Dozen/src/engine"]
-  dir_5["/home/phng/Code/Wheels/Dozen/src/graph"]
-  dir_6["/home/phng/Code/Wheels/Dozen/src/lang"]
-  dir_7["/home/phng/Code/Wheels/Dozen/src/model"]
-  dir_8["/home/phng/Code/Wheels/Dozen/src/parser"]
-  dir_9["/home/phng/Code/Wheels/Dozen/src/renderer"]
-  dir_10["/home/phng/Code/Wheels/Dozen/src/semantic"]
-  dir_2 --> dir_4
-  dir_2 --> dir_9
-  dir_4 --> dir_6
-  dir_4 --> dir_9
-  dir_6 --> dir_8
+  dir_3["/home/phng/Code/Wheels/Dozen/src/cli/commands"]
+  dir_4["/home/phng/Code/Wheels/Dozen/src/documentation"]
+  dir_5["/home/phng/Code/Wheels/Dozen/src/engine"]
+  dir_6["/home/phng/Code/Wheels/Dozen/src/graph"]
+  dir_7["/home/phng/Code/Wheels/Dozen/src/lang"]
+  dir_8["/home/phng/Code/Wheels/Dozen/src/model"]
+  dir_9["/home/phng/Code/Wheels/Dozen/src/parser"]
+  dir_10["/home/phng/Code/Wheels/Dozen/src/renderer"]
+  dir_11["/home/phng/Code/Wheels/Dozen/src/semantic"]
+  dir_2 --> dir_5
+  dir_2 --> dir_10
+  dir_3 --> dir_2
+  dir_3 --> dir_5
+  dir_3 --> dir_10
+  dir_5 --> dir_7
+  dir_5 --> dir_10
+  dir_7 --> dir_9
   dir_0 --> dir_2
 ```

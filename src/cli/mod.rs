@@ -5,6 +5,7 @@
 //! Rust port stays a drop-in replacement.
 
 pub mod command;
+pub mod commands;
 pub mod parser;
 pub mod scaffold;
 

@@ -74,7 +74,7 @@ The type system only needs three views of a type: the original spelling, the unq
 
 ## `Context` Struct Reference
 
-Shared state and helpers available to every subcommand.
+Shared state available to every subcommand implementation.
 
 ### Fields
 
@@ -86,17 +86,17 @@ Shared state and helpers available to every subcommand.
 
 | Return Type | Signature & Description |
 |-------------|-------------------------|
-| `Self` | `fn new(global_config: Option<PathBuf>) -> Self`<br>Create a context carrying the config supplied before the subcommand. |
-| `Result<Config>` | `fn load_config(&self, parsed: &Parser) -> Result<Config>`<br>Load the effective configuration for `parsed`. |
-| `&'a str` | `fn input_spec(&self, parsed: &'a Parser, config: &'a Config) -> &'a str`<br>Return the positional input, falling back to the configured glob. |
-| `PathBuf` | `fn output_path(&self, parsed: &Parser, default: &Path, base_dir: &Path) -> PathBuf`<br>Resolve the requested output against the configuration directory. |
-| `Result<()>` | `fn prepare_output(&self, output: &Path) -> Result<()>`<br>Create the parent directory of `output` when it is missing. |
+| `Self` | `fn new(global_config: Option<PathBuf>) -> Self`<br>Create a context carrying a global configuration path. |
+| `Result<Config>` | `fn load_config(&self, parsed: &Parser) -> Result<Config>`<br>Load configuration selected by subcommand or global options. |
+| `&'a str` | `fn input_spec(&self, parsed: &'a Parser, config: &'a Config) -> &'a str`<br>Return the positional input or the configured glob. |
+| `PathBuf` | `fn output_path(&self, parsed: &Parser, default: &Path, base_dir: &Path) -> PathBuf`<br>Resolve an output path against the configuration directory. |
+| `Result<()>` | `fn prepare_output(&self, output: &Path) -> Result<()>`<br>Create missing output parent directories. |
 
 ---
 
 ## `Command` Trait Reference
 
-A CLI subcommand with its own argument table and execution strategy.
+Interface implemented by every CLI subcommand.
 
 **Inherits:** `Sync`
 
@@ -104,16 +104,56 @@ A CLI subcommand with its own argument table and execution strategy.
 
 | Return Type | Signature & Description |
 |-------------|-------------------------|
-| `&'static str` | abstract `fn name(&self) -> &'static str`<br>Command name as typed on the command line. |
-| `&'static str` | abstract `fn usage(&self) -> &'static str`<br>One-line usage string printed on argument errors. |
-| `&'static str` | abstract `fn help(&self) -> &'static str`<br>Full help text printed for `-h` and `--help`. |
-| `&'static [Field]` | abstract `fn fields(&self) -> &'static [Field]`<br>Argument specification for this command. |
-| `Result<ExitCode>` | abstract `fn run(&self, rest: &[String], context: &Context) -> Result<ExitCode>`<br>Run the command with the arguments that follow the subcommand name. |
-| `Result<Parser>` | `fn parse(&self, rest: &[String]) -> Result<Parser>`<br>Parse `rest` or exit with argparse-compatible diagnostics. |
-| `String` | `fn error_program(&self) -> String`<br>Program name used in `argparse` error messages. |
-| `` | `fn print_help(&self)`<br>Print this command's help text. |
+| `&'static str` | abstract `fn name(&self) -> &'static str` |
+| `&'static str` | abstract `fn usage(&self) -> &'static str` |
+| `&'static str` | abstract `fn help(&self) -> &'static str` |
+| `&'static [Field]` | abstract `fn fields(&self) -> &'static [Field]` |
+| `Result<ExitCode>` | abstract `fn run(&self, rest: &[String], context: &Context) -> Result<ExitCode>` |
+| `Result<Parser>` | `fn parse(&self, rest: &[String]) -> Result<Parser>` |
+| `String` | `fn error_program(&self) -> String` |
+| `` | `fn print_help(&self)` |
 
 ---
+
+## `all()`
+
+```
+fn all() -> &'static [&'static dyn Command]
+```
+
+Return every registered command in help-text order.
+
+---
+
+## `find()`
+
+```
+fn find(name: &str) -> Option<&'static dyn Command>
+```
+
+Find a registered command by its command-line name.
+
+---
+
+## `kind_choices()`
+
+```
+fn kind_choices() -> String
+```
+
+Render the argparse choice list for `--kind`.
+
+---
+
+## `parse_or_exit()`
+
+```
+fn parse_or_exit(rest: &[String], fields: &[Field], usage: &str) -> Result<Parser>
+```
+
+Parse arguments or terminate with argparse-style diagnostics.
+
+# convert.rs
 
 ## `ConvertCommand` Struct Reference
 
@@ -125,13 +165,13 @@ A CLI subcommand with its own argument table and execution strategy.
 
 | Return Type | Signature & Description |
 |-------------|-------------------------|
-| `&'static str` | `fn name(&self) -> &'static str`<br>`convert` is the injected default subcommand. |
-| `&'static str` | `fn usage(&self) -> &'static str`<br>Usage line shown when argument parsing fails. |
-| `&'static str` | `fn help(&self) -> &'static str`<br>Full convert help text. |
-| `&'static [Field]` | `fn fields(&self) -> &'static [Field]`<br>Convert accepts output, config, and input. |
-| `Result<ExitCode>` | `fn run(&self, rest: &[String], context: &Context) -> Result<ExitCode>`<br>Render the selected files into the resolved Markdown output. |
+| `&'static str` | `fn name(&self) -> &'static str` |
+| `&'static str` | `fn usage(&self) -> &'static str` |
+| `&'static str` | `fn help(&self) -> &'static str` |
+| `&'static [Field]` | `fn fields(&self) -> &'static [Field]` |
+| `Result<ExitCode>` | `fn run(&self, rest: &[String], context: &Context) -> Result<ExitCode>` |
 
----
+# diagram.rs
 
 ## `DiagramCommand` Struct Reference
 
@@ -143,13 +183,13 @@ A CLI subcommand with its own argument table and execution strategy.
 
 | Return Type | Signature & Description |
 |-------------|-------------------------|
-| `&'static str` | `fn name(&self) -> &'static str`<br>`diagram` produces Mermaid graphs. |
-| `&'static str` | `fn usage(&self) -> &'static str`<br>Usage line shown when argument parsing fails. |
-| `&'static str` | `fn help(&self) -> &'static str`<br>Full diagram help text. |
-| `&'static [Field]` | `fn fields(&self) -> &'static [Field]`<br>Diagram accepts output, kind, config, and input. |
-| `Result<ExitCode>` | `fn run(&self, rest: &[String], context: &Context) -> Result<ExitCode>`<br>Render the selected files into the resolved diagram output. |
+| `&'static str` | `fn name(&self) -> &'static str` |
+| `&'static str` | `fn usage(&self) -> &'static str` |
+| `&'static str` | `fn help(&self) -> &'static str` |
+| `&'static [Field]` | `fn fields(&self) -> &'static [Field]` |
+| `Result<ExitCode>` | `fn run(&self, rest: &[String], context: &Context) -> Result<ExitCode>` |
 
----
+# init.rs
 
 ## `InitCommand` Struct Reference
 
@@ -161,51 +201,11 @@ A CLI subcommand with its own argument table and execution strategy.
 
 | Return Type | Signature & Description |
 |-------------|-------------------------|
-| `&'static str` | `fn name(&self) -> &'static str`<br>`init` scaffolds a configuration file. |
-| `&'static str` | `fn usage(&self) -> &'static str`<br>Usage line shown when argument parsing fails. |
-| `&'static str` | `fn help(&self) -> &'static str`<br>Full init help text. |
-| `&'static [Field]` | `fn fields(&self) -> &'static [Field]`<br>Init accepts a force flag and a target directory. |
-| `Result<ExitCode>` | `fn run(&self, rest: &[String], _context: &Context) -> Result<ExitCode>`<br>Write the starter configuration and report each written path. |
-
----
-
-## `all()`
-
-```
-fn all() -> &'static [&'static dyn Command]
-```
-
-Return every registered command, in help-text order.
-
----
-
-## `find()`
-
-```
-fn find(name: &str) -> Option<&'static dyn Command>
-```
-
-Find a command by its command-line name.
-
----
-
-## `kind_choices()`
-
-```
-fn kind_choices() -> String
-```
-
-Render the `argparse` choice list for `-k`.
-
----
-
-## `parse_or_exit()`
-
-```
-fn parse_or_exit(rest: &[String], fields: &[Field], usage: &str) -> Result<Parser>
-```
-
-Parse arguments or terminate with an argparse-style usage error.
+| `&'static str` | `fn name(&self) -> &'static str` |
+| `&'static str` | `fn usage(&self) -> &'static str` |
+| `&'static str` | `fn help(&self) -> &'static str` |
+| `&'static [Field]` | `fn fields(&self) -> &'static [Field]` |
+| `Result<ExitCode>` | `fn run(&self, rest: &[String], _context: &Context) -> Result<ExitCode>` |
 
 # mod.rs
 
@@ -913,6 +913,14 @@ Parse Bash functions and module metadata through Tree-sitter.
 
 ```
 fn text_at(source: &str, node: &Node<'_>) -> String
+```
+
+---
+
+## `module_doc()`
+
+```
+fn module_doc(source: &str, _root: &Node<'_>) -> String
 ```
 
 ---
