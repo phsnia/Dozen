@@ -1,0 +1,31 @@
+flowchart LR
+  Config["Config"]
+  EntityKind["EntityKind"]
+  Param["Param"]
+  Variant["Variant"]
+  Field["Field"]
+  Doc["Doc"]
+  Entity["Entity"]
+  DocParser["DocParser"]
+  Language["Language"]
+  PythonLanguage["PythonLanguage"]
+  RustLanguage["RustLanguage"]
+  CppLanguage["CppLanguage"]
+  ReferenceRenderer["ReferenceRenderer"]
+  MermaidRenderer["MermaidRenderer"]
+  Converter["Converter"]
+  Scaffolder["Scaffolder"]
+  Doc -->|uses| Param
+  Entity -->|uses| EntityKind
+  Entity -->|uses| Doc
+  Entity -->|uses| Variant
+  Entity -->|uses| Field
+  DocParser -->|uses| Doc
+  Language -->|uses| Entity
+  PythonLanguage -->|uses| Entity
+  RustLanguage -->|uses| Entity
+  CppLanguage -->|uses| Entity
+  ReferenceRenderer -->|uses| Entity
+  MermaidRenderer -->|uses| Entity
+  Converter -->|uses| Config
+  Converter -->|uses| Entity

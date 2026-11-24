@@ -1,0 +1,18 @@
+[package]
+name = "dozen"
+version = "0.5.0"
+edition = "2024"
+description = "Multi-language Doxygen-reference generator"
+
+[dependencies]
+anyhow = "1"
+encoding_rs = "0.8"
+glob = "0.3"
+regex = "1"
+ruff_python_ast = "=0.0.23"
+ruff_python_codegen = "=0.0.23"
+ruff_python_parser = "=0.0.23"
+ruff_source_file = "=0.0.23"
+
+[dev-dependencies]
+tempfile = "3"
