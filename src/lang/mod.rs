@@ -6,6 +6,7 @@ use regex::Regex;
 
 use crate::model::Entity;
 
+pub mod bash;
 pub mod cpp;
 pub mod python;
 pub mod registry;
@@ -22,9 +23,6 @@ pub trait Language {
 
 static BLOCK_START_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\s*/\*\*").unwrap());
 static BLOCK_PREFIX_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\s*\*\s?").unwrap());
-pub(crate) static LINE_COMMENT_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"//.*$").unwrap());
-
 /// Count the lines occupied by the block starting at `start`.
 ///
 /// Braces are tracked per character so one-line blocks (`fn foo() {}`) are
@@ -109,18 +107,6 @@ pub fn body_slice<'a>(lines: &'a [&'a str], start: usize, consumed: usize) -> &'
         .saturating_sub(1)
         .min(lines.len());
     if begin < end { &lines[begin..end] } else { &[] }
-}
-
-/// Approximate Python's `str.isidentifier` for the inputs the tools see.
-pub(crate) fn is_identifier(value: &str) -> bool {
-    let mut chars = value.chars();
-    let Some(first) = chars.next() else {
-        return false;
-    };
-    if first != '_' && !first.is_alphabetic() {
-        return false;
-    }
-    chars.all(|ch| ch == '_' || ch.is_alphanumeric())
 }
 
 #[cfg(test)]

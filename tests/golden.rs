@@ -100,6 +100,15 @@ fn rust_fixture_convert_matches_golden() {
 }
 
 #[test]
+fn bash_fixture_convert_matches_golden() {
+    let root = repo_root();
+    assert_matches(
+        "animal.sh.convert.md",
+        &convert(&root, Some("tests/fixtures/animal.sh"), None),
+    );
+}
+
+#[test]
 fn python_fixture_diagram_matches_golden() {
     let root = repo_root();
     assert_matches(
@@ -114,6 +123,15 @@ fn rust_fixture_diagram_matches_golden() {
     assert_matches(
         "animal.rs.graph.md",
         &diagram(&root, Some("tests/fixtures/animal.rs"), None),
+    );
+}
+
+#[test]
+fn bash_fixture_diagram_matches_golden() {
+    let root = repo_root();
+    assert_matches(
+        "animal.sh.graph.md",
+        &diagram(&root, Some("tests/fixtures/animal.sh"), None),
     );
 }
 

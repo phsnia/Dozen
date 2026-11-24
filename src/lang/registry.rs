@@ -1,11 +1,16 @@
-//! Extension registry for language plugins.
+//! @brief Extension registry for language plugins.
+//! @details Maps file suffixes to Tree-sitter-backed language implementations.
 
 use std::path::Path;
 
-use crate::lang::{Language, cpp::CppLanguage, python::PythonLanguage, rust::RustLanguage};
+use crate::lang::{
+    Language, bash::BashLanguage, cpp::CppLanguage, python::PythonLanguage, rust::RustLanguage,
+};
 
-/// Every extension the tool accepts, including the leading dot.
-pub const EXTENSIONS: &[&str] = &[".py", ".rs", ".cpp", ".hpp", ".h", ".cc", ".cxx", ".hh"];
+/// @brief Every extension the tool accepts, including the leading dot.
+pub const EXTENSIONS: &[&str] = &[
+    ".py", ".rs", ".cpp", ".hpp", ".h", ".cc", ".cxx", ".hh", ".sh", ".bash",
+];
 
 /// Maps file paths to the language plugin that can parse them.
 #[derive(Clone, Copy, Debug, Default)]
@@ -36,6 +41,7 @@ impl LanguageRegistry {
             ".py" => Some(Box::new(PythonLanguage)),
             ".rs" => Some(Box::new(RustLanguage)),
             ".cpp" | ".hpp" | ".h" | ".cc" | ".cxx" | ".hh" => Some(Box::new(CppLanguage)),
+            ".sh" | ".bash" => Some(Box::new(BashLanguage)),
             _ => None,
         }
     }

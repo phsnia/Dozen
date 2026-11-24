@@ -134,6 +134,7 @@ stderr.
 | Python | `.py` |
 | Rust | `.rs` |
 | C++ | `.cpp`, `.hpp`, `.h`, `.cc`, `.cxx`, `.hh` |
+| Bash | `.sh`, `.bash` |
 
 Extensions are matched case-insensitively. Directories are walked recursively;
 unsupported files are skipped.
@@ -168,9 +169,10 @@ src/
   lang/
     mod.rs                Language trait + shared source helpers
     registry.rs           extension -> language mapping
-    rust.rs               Rust parser (doc comments + heuristics)
-    cpp.rs                C++ parser (doc comments + heuristics)
-    python.rs             Python parser (Ruff AST + custom unparser)
+    rust.rs               Rust parser (Tree-sitter + Rust-native lowering)
+    cpp.rs                C++ parser (Tree-sitter + Rust-native lowering)
+    bash.rs               Bash parser (Tree-sitter + Rust-native lowering)
+    python.rs             Python parser (Tree-sitter + Rust-native AST lowering)
   renderer/
     mod.rs
     reference.rs          Markdown API reference renderer
@@ -182,10 +184,13 @@ tests/
   golden/                 frozen Python-generated expected outputs
 ```
 
-Python parsing uses `ruff_python_parser`, `ruff_python_ast`,
-`ruff_python_codegen` and `ruff_source_file`, pinned at `=0.0.23`. Codegen runs
-in `Mode::AstUnparse`; a small custom unparser handles `Subscript`, `Tuple`,
-`List`, and bitwise-or `BinOp` nodes to match CPython's `ast.unparse`.
+Python parsing uses pinned `tree-sitter` and `tree-sitter-python` crates.
+Tree-sitter syntax nodes are lowered through a Rust-native Python AST model;
+a small custom expression renderer matches the CPython annotation formatting
+used by the golden suite.
+
+Rust, C++, and Bash parsing use pinned Tree-sitter grammar crates and
+Rust-native lowering behind the same `Language` plugin interface.
 
 ## Development workflow
 

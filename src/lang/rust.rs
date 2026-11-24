@@ -1,49 +1,15 @@
-//! Rust source parsing from doc comments and declaration heuristics.
+//! @brief Rust source parsing through Tree-sitter.
+//! @details Lowers Rust declarations and impl methods into the shared entity model.
 
 use std::collections::HashMap;
-use std::sync::LazyLock;
 
-use regex::Regex;
+use tree_sitter::Node;
 
 use crate::ast::Visibility;
-use crate::documentation::{DOC_PARSER, split_lines};
-use crate::lang::{LINE_COMMENT_RE, Language, body_slice, consume_block, read_block_comment};
+use crate::documentation::DOC_PARSER;
+use crate::lang::Language;
 use crate::model::{Entity, EntityKind, Field, Variant, dedup_push};
-
-const VIS: &str = r"(?:pub(?:\([^)]*\))?\s+)?";
-
-static DOC_LINE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\s*///\s?(.*)$").unwrap());
-static ATTR: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\s*#\[.*\]\s*$").unwrap());
-
-static FN: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(&format!(
-        r#"^\s*{VIS}(?:(?:const|async|unsafe|extern(?:\s+"[^"]*")?)\s+)*fn\s+(\w+)\s*(?:<[^>]*>)?\s*\((.*?)\)(?:\s*->\s*([^{{;]+?))?\s*(?:\{{|;|where|$)"#
-    ))
-    .unwrap()
-});
-static STRUCT: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(&format!(r"^\s*{VIS}struct\s+(\w+)")).unwrap());
-static ENUM: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(&format!(r"^\s*{VIS}enum\s+(\w+)")).unwrap());
-static TRAIT: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(&format!(
-        r"^\s*{VIS}(?:unsafe\s+)?trait\s+(\w+)(?:\s*:\s*([^;]+?))?\s*(?:\{{|;|$)"
-    ))
-    .unwrap()
-});
-static IMPL: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^\s*impl(?:\s*<[^>]*>)?\s+(?:(\w+)\s+for\s+)?(\w+)").unwrap());
-static VARIANT: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^\s*(?:#\[.*\]\s*)?(\w+)\s*(?:[({,]|$)").unwrap());
-static FIELD: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^(pub(?:\([^)]*\))?\s+)?(\w+)\s*:\s*(.+?),?\s*$").unwrap());
-static USE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^\s*(?:pub\s+)?use\s+([^;]+);").unwrap());
-static MOD: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^\s*(?:pub\s+)?mod\s+(\w+)\s*;").unwrap());
-static EXTERN: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^\s*extern\s+crate\s+(\w+)").unwrap());
-static CALL: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\b([A-Za-z_]\w*)\s*\(").unwrap());
+use crate::parser::tree_sitter::parse_rust;
 
 const CALL_STOP: &[&str] = &[
     "if", "for", "while", "match", "loop", "return", "let", "fn", "impl", "struct", "enum",
@@ -51,330 +17,370 @@ const CALL_STOP: &[&str] = &[
     "Ok", "Err", "Self", "self", "super", "crate",
 ];
 
-/// Parse Rust items from `///` and `/** ... */` doc comments.
+/// @brief Parse Rust items from documentation comments and Tree-sitter syntax nodes.
 pub struct RustLanguage;
 
 impl Language for RustLanguage {
-    /// Rust uses a single `.rs` extension.
+    /// @brief Return Rust source extensions.
+    /// @return The `.rs` extension.
     fn extensions(&self) -> &'static [&'static str] {
         &[".rs"]
     }
 
-    /// Scan doc comments and emit Rust entities in source order.
+    /// @brief Parse one Rust source file.
+    /// @param[in] source Rust source text.
+    /// @param[in] filename Source filename used as the module name.
+    /// @return Contract entities, or an empty list for invalid syntax.
     fn parse(&self, source: &str, filename: &str) -> Vec<Entity> {
-        let lines = split_lines(source);
+        let Some(tree) = parse_rust(source) else {
+            return Vec::new();
+        };
+        let root = tree.root_node();
+        let mut entities = Vec::new();
         let mut module = Entity::new(EntityKind::Module, filename);
         module.line = 1;
-        module.includes = includes(&lines);
+        module.includes = includes(source, &root);
+        entities.push(module);
 
-        let mut entities = vec![module];
         let mut by_name: HashMap<String, usize> = HashMap::new();
-        let mut pending: Vec<String> = Vec::new();
-        let mut index = 0;
-
-        while index < lines.len() {
-            let line = lines[index];
-
-            if let Some(caps) = DOC_LINE.captures(line) {
-                pending.push(caps[1].to_owned());
-                index += 1;
-                continue;
-            }
-
-            if line.contains("/**") {
-                let (block, consumed) = read_block_comment(&lines, index);
-                if consumed > 0 {
-                    pending.extend(block);
-                    index += consumed;
-                    continue;
+        let mut cursor = root.walk();
+        for node in root.named_children(&mut cursor) {
+            match node.kind() {
+                "enum_item" => {
+                    let entity = enum_entity(source, &node);
+                    by_name.insert(entity.name.clone(), entities.len());
+                    entities.push(entity);
                 }
-            }
-
-            let stripped = line.trim();
-            if stripped.is_empty() || stripped.starts_with("//") || ATTR.is_match(line) {
-                index += 1;
-                continue;
-            }
-
-            if let Some(caps) = FN.captures(line) {
-                let (entity, consumed) = parse_fn(&caps, &lines, index, &pending);
-                let name = entity.name.clone();
-                entities.push(entity);
-                by_name.insert(name, entities.len() - 1);
-                index += consumed;
-                pending.clear();
-                continue;
-            }
-
-            if let Some(caps) = STRUCT.captures(line) {
-                let name = caps[1].to_owned();
-                let mut entity = Entity::new(EntityKind::Struct, &name);
-                entity.doc = DOC_PARSER.parse(&pending.join("\n"));
-                let consumed = consume_block(&lines, index);
-                entity.fields = parse_rust_fields(body_slice(&lines, index, consumed));
-                entity.line = index + 1;
-                entities.push(entity);
-                by_name.insert(name, entities.len() - 1);
-                index += consumed;
-                pending.clear();
-                continue;
-            }
-
-            if let Some(caps) = ENUM.captures(line) {
-                let name = caps[1].to_owned();
-                let mut entity = Entity::new(EntityKind::Enum, &name);
-                entity.doc = DOC_PARSER.parse(&pending.join("\n"));
-                let consumed = consume_block(&lines, index);
-                entity.variants = parse_variants(body_slice(&lines, index, consumed));
-                entity.line = index + 1;
-                entities.push(entity);
-                by_name.insert(name, entities.len() - 1);
-                index += consumed;
-                pending.clear();
-                continue;
-            }
-
-            if let Some(caps) = TRAIT.captures(line) {
-                let name = caps[1].to_owned();
-                let mut entity = Entity::new(EntityKind::Trait, &name);
-                entity.doc = DOC_PARSER.parse(&pending.join("\n"));
-                let bounds = caps.get(2).map_or("", |m| m.as_str()).trim();
-                entity.bases = bounds
-                    .split('+')
-                    .map(str::trim)
-                    .filter(|part| !part.is_empty())
-                    .map(str::to_owned)
-                    .collect();
-                let consumed = consume_block(&lines, index);
-                entity.members = parse_impl_body(body_slice(&lines, index, consumed));
-                entity.line = index + 1;
-                entities.push(entity);
-                by_name.insert(name, entities.len() - 1);
-                index += consumed;
-                pending.clear();
-                continue;
-            }
-
-            if let Some(caps) = IMPL.captures(line) {
-                let consumed = consume_block(&lines, index);
-                let inner = body_slice(&lines, index, consumed);
-                let methods = parse_impl_body(inner);
-                let trait_name = caps.get(1).map(|m| m.as_str());
-                let target = caps[2].to_owned();
-                if let Some(&entity_index) = by_name.get(&target) {
-                    let entity = &mut entities[entity_index];
-                    entity.members.extend(methods);
-                    if let Some(trait_name) = trait_name {
-                        dedup_push(&mut entity.implements, trait_name);
-                    }
+                "struct_item" => {
+                    let entity = struct_entity(source, &node);
+                    by_name.insert(entity.name.clone(), entities.len());
+                    entities.push(entity);
                 }
-                index += consumed;
-                pending.clear();
-                continue;
+                "trait_item" => {
+                    let entity = trait_entity(source, &node);
+                    by_name.insert(entity.name.clone(), entities.len());
+                    entities.push(entity);
+                }
+                "impl_item" => merge_impl(source, &node, &mut entities, &by_name),
+                "function_item" => {
+                    let entity = function_entity(source, &node, EntityKind::Function);
+                    entities.push(entity);
+                }
+                "extern_crate_declaration" | "use_declaration" | "mod_item" => {}
+                _ => {}
             }
-
-            pending.clear();
-            index += 1;
         }
-
         entities
     }
 }
 
-/// Build a function entity from a regex match and its parameter body.
-fn parse_fn(
-    caps: &regex::Captures<'_>,
-    lines: &[&str],
-    start: usize,
-    doc_lines: &[String],
-) -> (Entity, usize) {
-    let name = caps[1].to_owned();
-    let args = split_args(caps.get(2).map_or("", |m| m.as_str()));
-    let ret = caps.get(3).map_or("", |m| m.as_str()).trim().to_owned();
-    let mut signature = format!("fn {name}({})", args.join(", "));
-    if !ret.is_empty() {
+fn text_at(source: &str, node: &Node<'_>) -> String {
+    source.get(node.byte_range()).unwrap_or_default().to_owned()
+}
+
+fn node_name(source: &str, node: &Node<'_>) -> String {
+    node.child_by_field_name("name")
+        .map(|name| text_at(source, &name))
+        .unwrap_or_default()
+}
+
+fn preceding_doc(source: &str, node: &Node<'_>) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut current = node.prev_sibling();
+    while let Some(comment) = current {
+        if matches!(comment.kind(), "line_comment" | "block_comment") {
+            let text = text_at(source, &comment);
+            if comment.kind() == "block_comment" {
+                out.extend(clean_block_comment(&text));
+            } else {
+                out.push(clean_line_comment(&text));
+            }
+            current = comment.prev_sibling();
+        } else if comment.kind() == "attribute_item" {
+            current = comment.prev_sibling();
+        } else {
+            break;
+        }
+    }
+    out.reverse();
+    out
+}
+
+fn clean_line_comment(text: &str) -> String {
+    text.lines()
+        .map(|line| {
+            let mut rest = line.trim_start_matches("//").trim_start_matches('/');
+            if let Some(stripped) = rest.strip_prefix(' ') {
+                rest = stripped;
+            }
+            rest.to_owned()
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn clean_block_comment(text: &str) -> Vec<String> {
+    text.trim()
+        .strip_prefix("/**")
+        .or_else(|| text.trim().strip_prefix("/*"))
+        .unwrap_or(text.trim())
+        .strip_suffix("*/")
+        .unwrap_or(text.trim())
+        .lines()
+        .map(|line| line.trim().trim_start_matches('*').trim())
+        .filter(|line| !line.is_empty())
+        .map(str::to_owned)
+        .collect()
+}
+
+fn doc_for(source: &str, node: &Node<'_>) -> crate::model::Doc {
+    DOC_PARSER.parse(&preceding_doc(source, node).join("\n"))
+}
+
+fn visibility(node: &Node<'_>) -> Visibility {
+    let mut cursor = node.walk();
+    if node
+        .children(&mut cursor)
+        .any(|child| child.kind() == "visibility_modifier")
+    {
+        Visibility::Public
+    } else {
+        Visibility::Private
+    }
+}
+
+fn struct_entity(source: &str, node: &Node<'_>) -> Entity {
+    let mut entity = Entity::new(EntityKind::Struct, node_name(source, node));
+    entity.doc = doc_for(source, node);
+    entity.line = node.start_position().row + 1;
+    let Some(body) = node.child_by_field_name("body") else {
+        return entity;
+    };
+    let mut cursor = body.walk();
+    for child in body.named_children(&mut cursor) {
+        if child.kind() == "field_declaration" {
+            let name = child
+                .child_by_field_name("name")
+                .map(|name| text_at(source, &name))
+                .unwrap_or_default();
+            let type_name = child
+                .child_by_field_name("type")
+                .map(|type_| text_at(source, &type_))
+                .unwrap_or_default();
+            let mut field = Field::new(name);
+            field.r#type = type_name;
+            field.visibility = visibility(&child);
+            field.description = preceding_doc(source, &child).join(" ");
+            entity.fields.push(field);
+        }
+    }
+    entity
+}
+
+fn enum_entity(source: &str, node: &Node<'_>) -> Entity {
+    let mut entity = Entity::new(EntityKind::Enum, node_name(source, node));
+    entity.doc = doc_for(source, node);
+    entity.line = node.start_position().row + 1;
+    let Some(body) = node.child_by_field_name("body") else {
+        return entity;
+    };
+    let mut cursor = body.walk();
+    for child in body.named_children(&mut cursor) {
+        if child.kind() == "enum_variant" {
+            let name = child
+                .child_by_field_name("name")
+                .map(|name| text_at(source, &name))
+                .unwrap_or_default();
+            entity.variants.push(Variant {
+                name,
+                description: preceding_doc(source, &child).join(" "),
+            });
+        }
+    }
+    entity
+}
+
+fn trait_entity(source: &str, node: &Node<'_>) -> Entity {
+    let mut entity = Entity::new(EntityKind::Trait, node_name(source, node));
+    entity.doc = doc_for(source, node);
+    entity.line = node.start_position().row + 1;
+    if let Some(bounds) = node.child_by_field_name("bounds") {
+        let text = text_at(source, &bounds);
+        entity.bases = text
+            .trim()
+            .trim_start_matches(':')
+            .trim()
+            .split('+')
+            .map(str::trim)
+            .filter(|part| !part.is_empty())
+            .map(str::to_owned)
+            .collect();
+    }
+    let Some(body) = node.child_by_field_name("body") else {
+        return entity;
+    };
+    let mut cursor = body.walk();
+    for child in body.named_children(&mut cursor) {
+        if matches!(child.kind(), "function_signature_item" | "function_item") {
+            let mut method = function_entity(source, &child, EntityKind::Method);
+            method.r#abstract = child.kind() == "function_signature_item";
+            entity.members.push(method);
+        }
+    }
+    entity
+}
+
+fn function_entity(source: &str, node: &Node<'_>, kind: EntityKind) -> Entity {
+    let name = node_name(source, node);
+    let parameters = node
+        .child_by_field_name("parameters")
+        .map(|parameters| parameter_text(source, &parameters))
+        .unwrap_or_default();
+    let return_type = node
+        .child_by_field_name("return_type")
+        .map(|return_type| text_at(source, &return_type).trim().to_owned())
+        .unwrap_or_default();
+    let mut signature = format!("fn {name}({parameters})");
+    if !return_type.is_empty() {
         signature.push_str(" -> ");
-        signature.push_str(&ret);
+        signature.push_str(&return_type);
     }
-
-    let consumed = consume_block(lines, start);
-    let mut entity = Entity::new(EntityKind::Function, name);
+    let mut entity = Entity::new(kind, name);
     entity.signature = signature;
-    entity.return_type = ret;
-    entity.doc = DOC_PARSER.parse(&doc_lines.join("\n"));
-    entity.calls = calls_from_lines(body_slice(lines, start, consumed));
-    entity.line = start + 1;
-    (entity, consumed)
+    entity.return_type = return_type;
+    entity.doc = doc_for(source, node);
+    entity.line = node.start_position().row + 1;
+    entity.calls = calls(source, node);
+    entity.r#abstract = node.kind() == "function_signature_item";
+    entity
 }
 
-/// Parse documented fields from a struct or enum body.
-fn parse_rust_fields(lines: &[&str]) -> Vec<Field> {
-    let mut out = Vec::new();
-    let mut pending: Vec<String> = Vec::new();
-
-    for raw in lines {
-        if let Some(caps) = DOC_LINE.captures(raw) {
-            pending.push(caps[1].to_owned());
-            continue;
+fn parameter_text(source: &str, parameters: &Node<'_>) -> String {
+    let mut args = Vec::new();
+    let mut cursor = parameters.walk();
+    for parameter in parameters.named_children(&mut cursor) {
+        let text = text_at(source, &parameter).trim().to_owned();
+        if !text.is_empty() {
+            args.push(text);
         }
-
-        let stripped = LINE_COMMENT_RE.replace(raw, "");
-        let stripped = stripped.trim();
-        if stripped.is_empty() || stripped.starts_with('#') {
-            continue;
-        }
-
-        let Some(caps) = FIELD.captures(stripped) else {
-            pending.clear();
-            continue;
-        };
-
-        let visibility = if caps.get(1).is_some() {
-            Visibility::Public
-        } else {
-            Visibility::Private
-        };
-        let mut field = Field::new(&caps[2]);
-        field.r#type = caps[3].trim().trim_end_matches(',').to_owned();
-        field.visibility = visibility;
-        field.description = pending.join(" ");
-        out.push(field);
-        pending.clear();
     }
-
-    out
+    args.join(", ")
 }
 
-/// Parse enum variants and their attached doc comments.
-fn parse_variants(lines: &[&str]) -> Vec<Variant> {
-    let mut out = Vec::new();
-    let mut pending: Vec<String> = Vec::new();
+fn merge_impl(
+    source: &str,
+    node: &Node<'_>,
+    entities: &mut [Entity],
+    by_name: &HashMap<String, usize>,
+) {
+    let target = node
+        .child_by_field_name("type")
+        .map(|target| text_at(source, &target).trim().to_owned())
+        .unwrap_or_default();
+    let Some(&entity_index) = by_name.get(&target) else {
+        return;
+    };
+    let trait_name = node
+        .child_by_field_name("trait")
+        .map(|trait_| text_at(source, &trait_).trim().to_owned());
+    let Some(body) = node.child_by_field_name("body") else {
+        return;
+    };
+    let mut methods = Vec::new();
+    let mut cursor = body.walk();
+    for child in body.named_children(&mut cursor) {
+        if matches!(child.kind(), "function_item" | "function_signature_item") {
+            methods.push(function_entity(source, &child, EntityKind::Method));
+        }
+    }
+    let entity = &mut entities[entity_index];
+    entity.members.extend(methods);
+    if let Some(trait_name) = trait_name {
+        dedup_push(&mut entity.implements, trait_name);
+    }
+}
 
-    for raw in lines {
-        let line = raw.trim();
-        if line.is_empty() {
-            continue;
-        }
-        if let Some(caps) = DOC_LINE.captures(raw) {
-            pending.push(caps[1].to_owned());
-            continue;
-        }
-        if let Some(caps) = VARIANT.captures(line) {
-            let name = &caps[1];
-            if name.chars().next().is_some_and(char::is_alphabetic) {
-                out.push(Variant {
-                    name: name.to_owned(),
-                    description: pending.join(" "),
-                });
-                pending.clear();
+fn includes(source: &str, root: &Node<'_>) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut cursor = root.walk();
+    for node in root.named_children(&mut cursor) {
+        match node.kind() {
+            "use_declaration" => {
+                let text = text_at(source, &node);
+                let target = text
+                    .trim()
+                    .strip_prefix("use ")
+                    .unwrap_or(&text)
+                    .trim()
+                    .trim_end_matches(';')
+                    .trim();
+                let target = target.split('{').next().unwrap_or(target).trim();
+                dedup_push(&mut out, target);
             }
-        }
-    }
-
-    out
-}
-
-/// Parse the methods declared inside an `impl` block.
-fn parse_impl_body(lines: &[&str]) -> Vec<Entity> {
-    let mut out = Vec::new();
-    let mut pending: Vec<String> = Vec::new();
-    let mut index = 0;
-
-    while index < lines.len() {
-        let raw = lines[index];
-
-        if let Some(caps) = DOC_LINE.captures(raw) {
-            pending.push(caps[1].to_owned());
-            index += 1;
-            continue;
-        }
-
-        let stripped = raw.trim();
-        if stripped.is_empty() || stripped.starts_with("//") || ATTR.is_match(raw) {
-            index += 1;
-            continue;
-        }
-
-        if let Some(caps) = FN.captures(stripped) {
-            let name = caps[1].to_owned();
-            let args = split_args(caps.get(2).map_or("", |m| m.as_str()));
-            let ret = caps.get(3).map_or("", |m| m.as_str()).trim().to_owned();
-            let mut signature = format!("fn {name}({})", args.join(", "));
-            if !ret.is_empty() {
-                signature.push_str(" -> ");
-                signature.push_str(&ret);
+            "mod_item" => {
+                if let Some(name) = node.child_by_field_name("name") {
+                    dedup_push(&mut out, text_at(source, &name));
+                }
             }
-
-            let consumed = consume_block(lines, index);
-            let block_end = (index + consumed).min(lines.len());
-            let block = &lines[index..block_end];
-            let mut entity = Entity::new(EntityKind::Method, name);
-            entity.signature = signature;
-            entity.return_type = ret;
-            entity.doc = DOC_PARSER.parse(&pending.join("\n"));
-            entity.r#abstract = !block.iter().any(|line| line.contains('{'));
-            entity.calls = calls_from_lines(body_slice(lines, index, consumed));
-            out.push(entity);
-            pending.clear();
-            index += consumed;
-            continue;
-        }
-
-        pending.clear();
-        index += 1;
-    }
-
-    out
-}
-
-/// Collect `use` and `extern crate` targets as module includes.
-fn includes(lines: &[&str]) -> Vec<String> {
-    let mut out = Vec::new();
-
-    for raw in lines {
-        let target = if let Some(caps) = USE.captures(raw) {
-            let value = caps[1].split('{').next().unwrap_or("");
-            value.trim_end_matches([':', ',', ' ']).trim().to_owned()
-        } else if let Some(caps) = MOD.captures(raw).or_else(|| EXTERN.captures(raw)) {
-            caps[1].to_owned()
-        } else {
-            String::new()
-        };
-
-        dedup_push(&mut out, target);
-    }
-
-    out
-}
-
-/// Extract function calls from a block, skipping keywords and control flow.
-fn calls_from_lines(lines: &[&str]) -> Vec<String> {
-    let mut out = Vec::new();
-    for raw in lines {
-        let code = LINE_COMMENT_RE.replace(raw, "");
-        for caps in CALL.captures_iter(&code) {
-            let name = &caps[1];
-            if !CALL_STOP.contains(&name) {
-                dedup_push(&mut out, name);
+            "extern_crate_declaration" => {
+                if let Some(name) = node.child_by_field_name("name") {
+                    dedup_push(&mut out, text_at(source, &name));
+                }
             }
+            _ => {}
         }
     }
     out
+}
+
+fn calls(source: &str, root: &Node<'_>) -> Vec<String> {
+    let mut out = Vec::new();
+    walk_calls(source, root, &mut out);
+    out
+}
+
+fn walk_calls(source: &str, node: &Node<'_>, out: &mut Vec<String>) {
+    if node.kind() == "call_expression"
+        && let Some(function) = node.child_by_field_name("function")
+    {
+        let name = call_name(source, &function);
+        if !name.is_empty() && !CALL_STOP.contains(&name.as_str()) {
+            dedup_push(out, name);
+        }
+    }
+    let mut cursor = node.walk();
+    for child in node.named_children(&mut cursor) {
+        walk_calls(source, &child, out);
+    }
+}
+
+fn call_name(source: &str, node: &Node<'_>) -> String {
+    match node.kind() {
+        "identifier" => text_at(source, node),
+        "field_expression" => node
+            .child_by_field_name("field")
+            .map(|field| text_at(source, &field))
+            .unwrap_or_default(),
+        "scoped_identifier" => node
+            .child_by_field_name("name")
+            .map(|name| text_at(source, &name))
+            .unwrap_or_default(),
+        "type_identifier" => text_at(source, node),
+        _ => text_at(source, node),
+    }
 }
 
 /// Split a parameter list on top-level commas.
-fn split_args(raw: &str) -> Vec<String> {
+pub fn split_args(raw: &str) -> Vec<String> {
     let mut parts = Vec::new();
-    let mut depth: i32 = 0;
+    let mut depth = 0_i32;
     let mut buffer = String::new();
-
     for ch in raw.chars() {
         if matches!(ch, '<' | '(' | '[') {
             depth += 1;
         } else if matches!(ch, '>' | ')' | ']') {
             depth -= 1;
         }
-
         if ch == ',' && depth == 0 {
             parts.push(buffer.trim().to_owned());
             buffer.clear();
@@ -382,11 +388,9 @@ fn split_args(raw: &str) -> Vec<String> {
             buffer.push(ch);
         }
     }
-
     if !buffer.trim().is_empty() {
         parts.push(buffer.trim().to_owned());
     }
-
     parts
 }
 
@@ -399,8 +403,11 @@ mod tests {
         let source = std::fs::read_to_string("tests/fixtures/animal.rs").unwrap();
         let entities = RustLanguage.parse(&source, "animal.rs");
         assert_eq!(entities[0].kind, EntityKind::Module);
-        assert!(entities.iter().any(|e| e.name == "Animal"));
-        let animal = entities.iter().find(|e| e.name == "Animal").unwrap();
+        assert!(entities.iter().any(|entity| entity.name == "Animal"));
+        let animal = entities
+            .iter()
+            .find(|entity| entity.name == "Animal")
+            .unwrap();
         assert_eq!(animal.fields.len(), 3);
         assert_eq!(animal.members.len(), 3);
     }
@@ -411,5 +418,17 @@ mod tests {
             split_args("a: Vec<u8>, b: (i32, i32), c: &str"),
             vec!["a: Vec<u8>", "b: (i32, i32)", "c: &str"]
         );
+    }
+
+    #[test]
+    fn parses_mermaid_renderer_impl() {
+        let source =
+            std::fs::read_to_string("src/renderer/mermaid.rs").expect("read mermaid renderer");
+        let entities = RustLanguage.parse(&source, "mermaid.rs");
+        let renderer = entities
+            .iter()
+            .find(|entity| entity.name == "MermaidRenderer")
+            .expect("MermaidRenderer entity");
+        assert_eq!(renderer.members.len(), 12);
     }
 }

@@ -2,7 +2,7 @@
 
 ## `Visibility` Enum Reference
 
-Effective member visibility.
+! Declaration attributes shared by the model and the renderers. Effective member visibility.
 
 ### Enumerators
 
@@ -19,21 +19,22 @@ Effective member visibility.
 
 Non-type declaration modifiers carried by a member.
 
----
+### Fields
 
-## `maps_keywords_to_visibility()`
-
-```
-fn maps_keywords_to_visibility()
-```
+| Visibility | Type | Name | Description |
+|------------|------|------|-------------|
+| public | `bool` | `r#static` | The member is declared `static`. |
+| public | `bool` | `r#abstract` | The member has no concrete implementation. |
 
 # node.rs
 
 ## `NodeId` Struct Reference
 
-Stable index-based identity for a declaration inside one analysis pass.
+! Node identity shared by semantic tables and graphs. Stable index-based identity for a declaration inside one analysis pass.
 
 Python's renderer used `id(entity)`; the port uses the insertion order of a node list so identifiers stay deterministic across runs.
+
+**Implements:** `From<usize>`
 
 ### Public Member Functions
 
@@ -41,6 +42,7 @@ Python's renderer used `id(entity)`; the port uses the insertion order of a node
 |-------------|-------------------------|
 | `Self` | `fn new(index: usize) -> Self`<br>Create an identifier for the node at `index`. |
 | `usize` | `fn index(self) -> usize`<br>Return the zero-based insertion index. |
+| `Self` | `fn from(index: usize) -> Self` |
 
 # types.rs
 
@@ -67,22 +69,6 @@ The type system only needs three views of a type: the original spelling, the unq
 | `&str` | `fn base(&self) -> &str`<br>Return the unqualified base name used for symbol lookup. |
 | `&[String]` | `fn tokens(&self) -> &[String]`<br>Return the user-declared identifier tokens referenced by this type. |
 | `String` | `fn display(&self) -> String`<br>Render the type for a Mermaid class-block field. |
-
----
-
-## `separates_base_and_tokens()`
-
-```
-fn separates_base_and_tokens()
-```
-
----
-
-## `renders_mermaid_safe_display_text()`
-
-```
-fn renders_mermaid_safe_display_text()
-```
 
 # command.rs
 
@@ -278,6 +264,16 @@ Resolve the subcommand at the front of `args`.
 
 ---
 
+## `run_command()`
+
+```
+fn run_command(command: &dyn command::Command, rest: &[String], global_config: Option<PathBuf>) -> Result<ExitCode>
+```
+
+Print help for a subcommand, or run it with the shared context.
+
+---
+
 ## `is_help()`
 
 ```
@@ -377,55 +373,9 @@ Parsed arguments grouped by how they were declared.
 | `Option<&str>` | `fn opt(&self, name: &str) -> Option<&str>`<br>Returns the value of option `name`, if it was provided. |
 | `Option<&str>` | `fn str(&self) -> Option<&str>`<br>Returns the first positional argument, if any. |
 | `Result<Self, String>` | `fn parse(args: impl Iterator<Item = String>, spec: &[Field]) -> Result<Self, String>`<br>Parse `args` according to `spec`. |
+| `Result<(), String>` | `fn parse_long(&mut self, long: &str, args: &mut impl Iterator<Item = String>, spec: &[Field]) -> Result<(), String>`<br>Parse one `--name[=value]` argument. |
+| `Result<(), String>` | `fn parse_short(&mut self, short: &str, args: &mut impl Iterator<Item = String>, spec: &[Field]) -> Result<(), String>`<br>Parse one cluster of short options such as `-va` or `-oout.md`. |
 | `` | `fn push_flag(&mut self, long: &str)`<br>Record a flag once, even when it is repeated. |
-
----
-
-## `parse()`
-
-```
-fn parse(args: &[&str]) -> Result<Parser, String>
-```
-
----
-
-## `parses_long_options_and_flags()`
-
-```
-fn parses_long_options_and_flags()
-```
-
----
-
-## `parses_short_flags_and_attached_option_values()`
-
-```
-fn parses_short_flags_and_attached_option_values()
-```
-
----
-
-## `collects_positionals_and_stops_at_double_dash()`
-
-```
-fn collects_positionals_and_stops_at_double_dash()
-```
-
----
-
-## `last_option_wins_and_flags_are_unique()`
-
-```
-fn last_option_wins_and_flags_are_unique()
-```
-
----
-
-## `rejects_unknown_and_incomplete_options()`
-
-```
-fn rejects_unknown_and_incomplete_options()
-```
 
 # scaffold.rs
 
@@ -580,46 +530,6 @@ fn partition_space(value: &str) -> (&str, &str, &str)
 
 Split `value` on the first ASCII space, mirroring Python's `partition(" ")`.
 
----
-
-## `parses_brief_and_paragraphs()`
-
-```
-fn parses_brief_and_paragraphs()
-```
-
----
-
-## `parses_tags_and_aliases()`
-
-```
-fn parses_tags_and_aliases()
-```
-
----
-
-## `preserves_blank_lines_in_details_and_examples()`
-
-```
-fn preserves_blank_lines_in_details_and_examples()
-```
-
----
-
-## `cleandoc_matches_python_semantics()`
-
-```
-fn cleandoc_matches_python_semantics()
-```
-
----
-
-## `split_lines_handles_python_separators()`
-
-```
-fn split_lines_handles_python_separators()
-```
-
 # parser.rs
 
 ## `DocParser` Struct Reference
@@ -631,30 +541,6 @@ Convert a comment block into a structured [`Doc`] model.
 | Return Type | Signature & Description |
 |-------------|-------------------------|
 | `Doc` | `fn parse(&self, text: &str) -> Doc`<br>Parse one comment block into its brief, details, and tagged fields. |
-
----
-
-## `parses_brief_and_paragraphs()`
-
-```
-fn parses_brief_and_paragraphs()
-```
-
----
-
-## `parses_tags_and_aliases()`
-
-```
-fn parses_tags_and_aliases()
-```
-
----
-
-## `preserves_blank_lines_in_details_and_examples()`
-
-```
-fn preserves_blank_lines_in_details_and_examples()
-```
 
 # tags.rs
 
@@ -705,13 +591,6 @@ One parsed `@tag`, including its optional direction and inline value.
 | public | `Tag` | `tag` | Resolved tag. |
 | public | `&'a str` | `direction` | Direction capture, defaulting to `in`. |
 | public | `&'a str` | `value` | Inline text after the tag, already trimmed. |
-
-### Public Member Functions
-
-| Return Type | Signature & Description |
-|-------------|-------------------------|
-| `Option<Self>` | `fn parse(line: &'a str) -> Option<Self>`<br>Parse a trimmed line, returning `None` when it is not a tag line. |
-| `bool` | `fn is_tag(line: &str) -> bool`<br>Report whether a trimmed line starts with a documentation tag. |
 
 ---
 
@@ -812,22 +691,6 @@ fn python_path(value: &str) -> PathBuf
 
 `Path("")` in Python is `Path(".")`.
 
----
-
-## `parses_defaults()`
-
-```
-fn parses_defaults()
-```
-
----
-
-## `ignores_other_sections_and_comments()`
-
-```
-fn ignores_other_sections_and_comments()
-```
-
 # converter.rs
 
 ## `TextCodec` Struct Reference
@@ -925,101 +788,6 @@ directories in contract order. Absolute patterns are searched directly.
 |------------|------|------|-------------|
 | private | `Option<&'a Path>` | `base_dir` | Directory used to resolve relative patterns.  @note `None` disables configured-base candidate lookup. |
 
-### Public Member Functions
-
-| Return Type | Signature & Description |
-|-------------|-------------------------|
-| `Self` | `fn new(base_dir: Option<&'a Path>) -> Self`<br>Create a finder that resolves relative patterns against `base_dir`. |
-| `Vec<PathBuf>` | `fn collect(&self, root: &str) -> Vec<PathBuf>`<br>Expand `root` into a sorted, de-duplicated list of supported files. |
-| `anyhow::Result<Vec<PathBuf>>` | `fn select(&self, root: &str) -> anyhow::Result<Vec<PathBuf>>`<br>Expand `root` and fail when nothing supported was found. |
-| `Vec<PathBuf>` | `fn candidate_bases(&self) -> Vec<PathBuf>`<br>Candidate base directories, in the order `dox.py` tries them. |
-| `Vec<Option<PathBuf>>` | `fn search_bases(&self, absolute: bool) -> Vec<Option<PathBuf>>`<br>Pair each base directory with the absolute/relative form to glob. |
-| `Vec<PathBuf>` | `fn expand(&self, root: &str) -> Vec<PathBuf>`<br>Glob `root` from the first base directory that produces matches. |
-| `Vec<PathBuf>` | `fn candidate_files(&self, candidate: &Path) -> Vec<PathBuf>`<br>Turn one glob hit into the files it represents. |
-| `Vec<PathBuf>` | `fn directory_files(&self, directory: &Path) -> Vec<PathBuf>`<br>Recursively collect supported files under `directory`. |
-
-### Method Contracts
-
-#### `new()`
-
-**Parameters**
-
-| Direction | Name | Type | Description |
-|-----------|------|------|-------------|
-| [in] | `base_dir` | `` | Directory against which relative patterns are resolved. |
-
-**Returns:** A finder with the requested base directory.
-
-#### `collect()`
-
-**Parameters**
-
-| Direction | Name | Type | Description |
-|-----------|------|------|-------------|
-| [in] | `root` | `` | File, directory, or glob pattern to collect. |
-
-**Returns:** Sorted, de-duplicated supported source paths.
-
-#### `select()`
-
-**Parameters**
-
-| Direction | Name | Type | Description |
-|-----------|------|------|-------------|
-| [in] | `root` | `` | File, directory, or glob pattern to select. |
-
-**Returns:** The supported paths, or the contract's no-files error.
-
-**Exceptions**
-
-| Exception | Description |
-|-----------|-------------|
-| `Any` | error when the selection contains no supported source file. |
-
-#### `candidate_bases()`
-
-**Returns:** Unique base directories in contract lookup order.
-
-#### `search_bases()`
-
-**Parameters**
-
-| Direction | Name | Type | Description |
-|-----------|------|------|-------------|
-| [in] | `absolute` | `` | Whether `root` is an absolute glob pattern. |
-
-**Returns:** Search bases to try, or no base for absolute patterns.
-
-#### `expand()`
-
-**Parameters**
-
-| Direction | Name | Type | Description |
-|-----------|------|------|-------------|
-| [in] | `root` | `` | File, directory, or glob pattern. |
-
-**Returns:** All matches from the first candidate base with matches.
-
-#### `candidate_files()`
-
-**Parameters**
-
-| Direction | Name | Type | Description |
-|-----------|------|------|-------------|
-| [in] | `candidate` | `` | A file or directory produced by glob expansion. |
-
-**Returns:** The candidate itself or recursively discovered source files.
-
-#### `directory_files()`
-
-**Parameters**
-
-| Direction | Name | Type | Description |
-|-----------|------|------|-------------|
-| [in] | `directory` | `` | Directory to walk recursively. |
-
-**Returns:** Supported files found below the directory.
-
 ---
 
 ## `OutputResolver` Struct Reference
@@ -1034,84 +802,6 @@ configured base directory.
 | Visibility | Type | Name | Description |
 |------------|------|------|-------------|
 | private | `&'a Path` | `base_dir` | Directory that relative outputs are joined to.  @note This is normally the directory containing `ini.cfg`. |
-
-### Public Member Functions
-
-| Return Type | Signature & Description |
-|-------------|-------------------------|
-| `Self` | `fn new(base_dir: &'a Path) -> Self`<br>Create a resolver rooted at `base_dir`. |
-| `PathBuf` | `fn resolve(&self, value: Option<&Path>, default: &Path) -> PathBuf`<br>Resolve `value`, falling back to `default`, against the base directory. |
-
-### Method Contracts
-
-#### `new()`
-
-**Parameters**
-
-| Direction | Name | Type | Description |
-|-----------|------|------|-------------|
-| [in] | `base_dir` | `` | Directory used for relative output paths. |
-
-**Returns:** An output resolver rooted at `base_dir`.
-
-#### `resolve()`
-
-**Parameters**
-
-| Direction | Name | Type | Description |
-|-----------|------|------|-------------|
-| [in] | `value` | `` | Explicit output path, if supplied. |
-| [in] | `default` | `` | Output path used when `value` is absent. |
-
-**Returns:** The absolute or base-relative output path.
-
----
-
-## `resolves_relative_output_against_base_dir()`
-
-```
-fn resolves_relative_output_against_base_dir()
-```
-
----
-
-## `keeps_absolute_outputs()`
-
-```
-fn keeps_absolute_outputs()
-```
-
----
-
-## `collects_directory_recursively_and_skips_unsupported_files()`
-
-```
-fn collects_directory_recursively_and_skips_unsupported_files()
-```
-
----
-
-## `falls_back_to_parent_base_directories()`
-
-```
-fn falls_back_to_parent_base_directories()
-```
-
----
-
-## `expands_globs_in_sorted_order()`
-
-```
-fn expands_globs_in_sorted_order()
-```
-
----
-
-## `crate_root()`
-
-```
-fn crate_root() -> PathBuf
-```
 
 # call_graph.rs
 
@@ -1185,18 +875,11 @@ A directed graph edge with an optional label.
 | public | `T` | `to` |  |
 | public | `Option<String>` | `label` |  |
 
-### Public Member Functions
+# bash.rs
 
-| Return Type | Signature & Description |
-|-------------|-------------------------|
-| `Self` | `fn new(from: T, to: T) -> Self` |
-| `Self` | `fn labelled(from: T, to: T, label: impl Into<String>) -> Self` |
+## `BashLanguage` Struct Reference
 
-# cpp.rs
-
-## `CppLanguage` Struct Reference
-
-Parse C++ declarations from `///` and `/** ... */` comments.
+Parse Bash functions and module metadata through Tree-sitter.
 
 **Implements:** `Language`
 
@@ -1204,83 +887,296 @@ Parse C++ declarations from `///` and `/** ... */` comments.
 
 | Return Type | Signature & Description |
 |-------------|-------------------------|
-| `&'static [&'static str]` | `fn extensions(&self) -> &'static [&'static str]`<br>C++ headers and implementation files share one parser. |
-| `Vec<Entity>` | `fn parse(&self, source: &str, filename: &str) -> Vec<Entity>`<br>Scan doc comments and emit C++ entities in source order. |
+| `&'static [&'static str]` | `fn extensions(&self) -> &'static [&'static str]`<br>Return Bash source extensions. |
+| `Vec<Entity>` | `fn parse(&self, source: &str, filename: &str) -> Vec<Entity>`<br>Parse one Bash source file. |
+
+### Method Contracts
+
+#### `extensions()`
+
+**Returns:** `.sh` and `.bash` extensions.
+
+#### `parse()`
+
+**Parameters**
+
+| Direction | Name | Type | Description |
+|-----------|------|------|-------------|
+| [in] | `source` | `` | Bash source text. |
+| [in] | `filename` | `` | Source filename used as the module name. |
+
+**Returns:** Contract entities, or an empty list for invalid syntax.
 
 ---
 
-## `parse_class_body()`
+## `text_at()`
 
 ```
-fn parse_class_body(lines: &[&str], default_visibility: Visibility) -> (Vec<Entity>, Vec<Field>)
+fn text_at(source: &str, node: &Node<'_>) -> String
 ```
-
-Parse members from a class or struct body using the current visibility.
 
 ---
 
-## `base_names()`
+## `preceding_doc()`
 
 ```
-fn base_names(raw: Option<&str>) -> Vec<String>
+fn preceding_doc(source: &str, node: &Node<'_>) -> Vec<String>
 ```
 
-Split a base-class clause into individual base names.
+---
+
+## `walk_functions()`
+
+```
+fn walk_functions(source: &str, node: &Node<'_>, entities: &mut Vec<Entity>)
+```
 
 ---
 
 ## `includes()`
 
 ```
-fn includes(lines: &[&str]) -> Vec<String>
-```
-
-Collect `#include` targets as module includes.
-
----
-
-## `calls_from_lines()`
-
-```
-fn calls_from_lines(lines: &[&str]) -> Vec<String>
-```
-
-Extract function calls from a block, skipping C++ keywords and casts.
-
----
-
-## `parse_cpp_params()`
-
-```
-fn parse_cpp_params(raw: &str) -> HashMap<String, String>
-```
-
-Map parameter names to their declared types.
-
----
-
-## `merge_types()`
-
-```
-fn merge_types(doc: &mut crate::model::Doc, types: &HashMap<String, String>)
-```
-
-Fill missing parameter types from the parsed declaration.
-
----
-
-## `parses_parameters()`
-
-```
-fn parses_parameters()
+fn includes(source: &str, root: &Node<'_>) -> Vec<String>
 ```
 
 ---
 
-## `cleans_base_names()`
+## `collect_includes()`
 
 ```
-fn cleans_base_names()
+fn collect_includes(source: &str, node: &Node<'_>, out: &mut Vec<String>)
+```
+
+---
+
+## `calls()`
+
+```
+fn calls(source: &str, root: &Node<'_>) -> Vec<String>
+```
+
+---
+
+## `walk_calls()`
+
+```
+fn walk_calls(source: &str, node: &Node<'_>, out: &mut Vec<String>)
+```
+
+# cpp.rs
+
+## `CppLanguage` Struct Reference
+
+Parse C++ declarations through Tree-sitter.
+
+**Implements:** `Language`
+
+### Public Member Functions
+
+| Return Type | Signature & Description |
+|-------------|-------------------------|
+| `&'static [&'static str]` | `fn extensions(&self) -> &'static [&'static str]`<br>Return C++ source extensions. |
+| `Vec<Entity>` | `fn parse(&self, source: &str, filename: &str) -> Vec<Entity>`<br>Parse one C++ source file. |
+
+### Method Contracts
+
+#### `extensions()`
+
+**Returns:** Supported C++ header and implementation extensions.
+
+#### `parse()`
+
+**Parameters**
+
+| Direction | Name | Type | Description |
+|-----------|------|------|-------------|
+| [in] | `source` | `` | C++ source text. |
+| [in] | `filename` | `` | Source filename used as the module name. |
+
+**Returns:** Contract entities, or an empty list for invalid syntax.
+
+---
+
+## `text_at()`
+
+```
+fn text_at(source: &str, node: &Node<'_>) -> String
+```
+
+---
+
+## `clean_comment()`
+
+```
+fn clean_comment(text: &str) -> Vec<String>
+```
+
+---
+
+## `preceding_doc()`
+
+```
+fn preceding_doc(source: &str, node: &Node<'_>) -> Vec<String>
+```
+
+---
+
+## `doc_for()`
+
+```
+fn doc_for(source: &str, node: &Node<'_>) -> crate::model::Doc
+```
+
+---
+
+## `walk_top_level()`
+
+```
+fn walk_top_level(source: &str, node: &Node<'_>, entities: &mut Vec<Entity>, by_name: &mut HashMap<String, usize>)
+```
+
+---
+
+## `enum_entity()`
+
+```
+fn enum_entity(source: &str, node: &Node<'_>) -> Entity
+```
+
+---
+
+## `class_entity()`
+
+```
+fn class_entity(source: &str, node: &Node<'_>) -> Entity
+```
+
+---
+
+## `field_entity()`
+
+```
+fn field_entity(source: &str, node: &Node<'_>, visibility: Visibility) -> Option<Field>
+```
+
+---
+
+## `node_name()`
+
+```
+fn node_name(source: &str, node: &Node<'_>) -> String
+```
+
+---
+
+## `method_declaration()`
+
+```
+fn method_declaration(source: &str, node: &Node<'_>) -> Option<Entity>
+```
+
+---
+
+## `declarator_parameter_text()`
+
+```
+fn declarator_parameter_text(source: &str, declarator: &Node<'_>) -> String
+```
+
+---
+
+## `find_parameters()`
+
+```
+fn find_parameters(node: &Node<'a>) -> Option<Node<'a>>
+```
+
+---
+
+## `parameter_types()`
+
+```
+fn parameter_types(source: &str, parameters: &Node<'_>) -> HashMap<String, String>
+```
+
+---
+
+## `merge_parameter_types()`
+
+```
+fn merge_parameter_types(doc: &mut crate::model::Doc, types: &HashMap<String, String>)
+```
+
+---
+
+## `function_entity()`
+
+```
+fn function_entity(source: &str, node: &Node<'_>, kind: EntityKind) -> Entity
+```
+
+---
+
+## `qualified_name()`
+
+```
+fn qualified_name(source: &str, declarator: &Node<'_>) -> String
+```
+
+---
+
+## `merge_impl_methods()`
+
+```
+fn merge_impl_methods(source: &str, root: &Node<'_>, entities: &mut [Entity], by_name: &HashMap<String, usize>)
+```
+
+---
+
+## `merge_methods_in_namespace()`
+
+```
+fn merge_methods_in_namespace(source: &str, root: &Node<'_>, entities: &mut [Entity], by_name: &HashMap<String, usize>)
+```
+
+---
+
+## `base_names()`
+
+```
+fn base_names(raw: &str) -> Vec<String>
+```
+
+---
+
+## `includes()`
+
+```
+fn includes(source: &str, root: &Node<'_>) -> Vec<String>
+```
+
+---
+
+## `collect_includes()`
+
+```
+fn collect_includes(source: &str, node: &Node<'_>, out: &mut Vec<String>)
+```
+
+---
+
+## `calls()`
+
+```
+fn calls(source: &str, root: &Node<'_>) -> Vec<String>
+```
+
+---
+
+## `walk_calls()`
+
+```
+fn walk_calls(source: &str, node: &Node<'_>, out: &mut Vec<String>)
 ```
 
 # mod.rs
@@ -1334,37 +1230,33 @@ fn body_slice(lines: &'a [&'a str], start: usize, consumed: usize) -> &'a [&'a s
 
 Slice `lines[start + 1 .. start + consumed - 1]` safely.
 
----
-
-## `is_identifier()`
-
-```
-fn is_identifier(value: &str) -> bool
-```
-
-Approximate Python's `str.isidentifier` for the inputs the tools see.
-
----
-
-## `consumes_braced_and_semicolon_blocks()`
-
-```
-fn consumes_braced_and_semicolon_blocks()
-```
-
----
-
-## `reads_block_comments()`
-
-```
-fn reads_block_comments()
-```
-
 # python.rs
+
+## `PyExpr` Enum Reference
+
+Rust-native expression subset used for Python annotations and call names.
+
+This small AST avoids exposing Tree-sitter grammar nodes to renderers.
+
+### Enumerators
+
+| Enumerator | Description |
+|------------|-------------|
+| `Raw` |  |
+| `Name` |  |
+| `Attribute` |  |
+| `Subscript` |  |
+| `Tuple` |  |
+| `List` |  |
+| `BinOp` |  |
+| `String` |  |
+| `Call` |  |
+
+---
 
 ## `PythonLanguage` Struct Reference
 
-Parse Python modules, classes, and functions through the Ruff AST.
+Parse Python modules, classes, and functions through Tree-sitter.
 
 **Implements:** `Language`
 
@@ -1372,128 +1264,290 @@ Parse Python modules, classes, and functions through the Ruff AST.
 
 | Return Type | Signature & Description |
 |-------------|-------------------------|
-| `&'static [&'static str]` | `fn extensions(&self) -> &'static [&'static str]`<br>Python uses a single `.py` extension. |
-| `Vec<Entity>` | `fn parse(&self, source: &str, filename: &str) -> Vec<Entity>`<br>Parse a Python module and emit its classes and functions. |
+| `&'static [&'static str]` | `fn extensions(&self) -> &'static [&'static str]`<br>Return Python source extensions. |
+| `Vec<Entity>` | `fn parse(&self, source: &str, filename: &str) -> Vec<Entity>`<br>Parse one Python source file. |
+
+### Method Contracts
+
+#### `extensions()`
+
+**Returns:** The `.py` extension.
+
+#### `parse()`
+
+**Parameters**
+
+| Direction | Name | Type | Description |
+|-----------|------|------|-------------|
+| [in] | `source` | `` | Python source text. |
+| [in] | `filename` | `` | Source filename used as the module name. |
+
+**Returns:** Contract entities, or an empty list for invalid syntax.
 
 ---
 
-## `line_of()`
+## `unwrap_decorated()`
 
 ```
-fn line_of(source: &str, stmt: &Stmt) -> usize
+fn unwrap_decorated(node: &Node<'a>) -> Node<'a>
 ```
 
-Return the one-based source line containing `stmt`.
+Unwrap one decorated class or function definition.
+
+### Parameters
+
+| Direction | Name | Type | Description |
+|-----------|------|------|-------------|
+| [in] | `node` | `` | Tree-sitter decorated-definition node. |
+
+### Returns
+
+The underlying function or class node.
+
+---
+
+## `text_at()`
+
+```
+fn text_at(source: &str, node: &Node<'_>) -> String
+```
+
+Read the exact source text covered by a syntax node.
+
+### Parameters
+
+| Direction | Name | Type | Description |
+|-----------|------|------|-------------|
+| [in] | `source` | `` | Complete source text. |
+| [in] | `node` | `` | Tree-sitter syntax node. |
+
+### Returns
+
+Source text for the node.
+
+---
+
+## `module_docstring()`
+
+```
+fn module_docstring(source: &str, root: &Node<'_>) -> Option<String>
+```
+
+Extract and clean a module docstring.
+
+### Parameters
+
+| Direction | Name | Type | Description |
+|-----------|------|------|-------------|
+| [in] | `source` | `` | Complete source text. |
+| [in] | `root` | `` | Python module syntax root. |
+
+### Returns
+
+Cleaned module docstring, if present.
 
 ---
 
 ## `docstring()`
 
 ```
-fn docstring(body: &[Stmt]) -> Option<String>
+fn docstring(source: &str, body: &Node<'_>) -> Option<String>
 ```
 
-Return the cleaned first docstring in a statement body.
+Extract and clean the leading docstring of a declaration body.
+
+### Parameters
+
+| Direction | Name | Type | Description |
+|-----------|------|------|-------------|
+| [in] | `source` | `` | Complete source text. |
+| [in] | `body` | `` | Declaration body node. |
+
+### Returns
+
+Cleaned docstring, if present.
 
 ---
 
-## `unparse()`
+## `clean_string()`
 
 ```
-fn unparse(expr: &Expr) -> String
+fn clean_string(raw: &str) -> String
 ```
 
-Render an expression with CPython `ast.unparse` formatting.
+Remove Python string prefixes and quote delimiters.
+
+### Parameters
+
+| Direction | Name | Type | Description |
+|-----------|------|------|-------------|
+| [in] | `raw` | `` | Source spelling of a string literal. |
+
+### Returns
+
+String content suitable for `inspect.cleandoc`-style cleanup.
 
 ---
 
-## `unparse_slice()`
+## `line_of()`
 
 ```
-fn unparse_slice(slice: &Expr) -> String
+fn line_of(node: &Node<'_>) -> usize
 ```
 
-Render a subscript slice the way CPython's `ast.unparse` does: tuple slices lose their parentheses, while a lone `Slice` keeps its `:` form.
+Convert a Tree-sitter row to a one-based source line.
+
+### Parameters
+
+| Direction | Name | Type | Description |
+|-----------|------|------|-------------|
+| [in] | `node` | `` | Tree-sitter syntax node. |
+
+### Returns
+
+One-based source line.
 
 ---
 
-## `unparse_slice_element()`
+## `function_entity()`
 
 ```
-fn unparse_slice_element(expr: &Expr) -> String
+fn function_entity(source: &str, node: &Node<'_>, kind: EntityKind) -> Entity
 ```
 
-Render one element of a subscript slice.
+Lower a Python function or method into an entity.
+
+### Parameters
+
+| Direction | Name | Type | Description |
+|-----------|------|------|-------------|
+| [in] | `source` | `` | Complete source text. |
+| [in] | `node` | `` | Function-definition syntax node. |
+| [in] | `kind` | `` | Function or method entity kind. |
+
+### Returns
+
+The lowered contract entity.
 
 ---
 
-## `function()`
+## `parameter_annotations()`
 
 ```
-fn function(stmt: &Stmt, kind: EntityKind) -> Entity
+fn parameter_annotations(source: &str, parameters: Option<&Node<'_>>) -> HashMap<String, String>
 ```
 
-Build a function or method entity from its AST node.
+---
+
+## `parameter_name()`
+
+```
+fn parameter_name(source: &str, parameter: &Node<'_>) -> String
+```
+
+---
+
+## `parameter_annotation()`
+
+```
+fn parameter_annotation(source: &str, parameter: &Node<'_>) -> Option<String>
+```
+
+---
+
+## `unparse_annotation_text()`
+
+```
+fn unparse_annotation_text(text: &str) -> String
+```
 
 ---
 
 ## `class_entity()`
 
 ```
-fn class_entity(node: &StmtClassDef, kind: EntityKind, source: &str) -> Entity
+fn class_entity(source: &str, node: &Node<'_>, kind: EntityKind) -> Entity
 ```
-
-Build a class or enum entity, including fields and public methods.
 
 ---
 
-## `function_instance()`
+## `find_method()`
 
 ```
-fn function_instance(stmt: &Stmt) -> Entity
+fn find_method(source: &str, class: &Node<'a>, wanted: &str) -> Option<Node<'a>>
 ```
 
-Build a method entity that belongs to the enclosing class.
+---
+
+## `is_enum_class()`
+
+```
+fn is_enum_class(source: &str, node: &Node<'_>) -> bool
+```
+
+---
+
+## `is_abstract_class()`
+
+```
+fn is_abstract_class(source: &str, node: &Node<'_>) -> bool
+```
+
+---
+
+## `is_abstract_method()`
+
+```
+fn is_abstract_method(source: &str, original: &Node<'_>) -> bool
+```
+
+---
+
+## `class_bases()`
+
+```
+fn class_bases(source: &str, node: &Node<'_>) -> Vec<String>
+```
 
 ---
 
 ## `enum_variants()`
 
 ```
-fn enum_variants(node: &StmtClassDef) -> Vec<Variant>
+fn enum_variants(source: &str, node: &Node<'_>) -> Vec<Variant>
 ```
-
-Collect enum members and their docstrings.
 
 ---
 
-## `base_names()`
+## `collect_fields()`
 
 ```
-fn base_names(node: &StmtClassDef) -> Vec<String>
+fn collect_fields(source: &str, class: &Node<'_>, init: Option<&Node<'_>>) -> Vec<Field>
 ```
-
-Return the explicit base classes that should appear in diagrams.
 
 ---
 
-## `fields()`
+## `walk_fields()`
 
 ```
-fn fields(node: &StmtClassDef, init: Option<&Stmt>) -> Vec<Field>
+fn walk_fields(source: &str, node: &Node<'_>, hints: &HashMap<String, String>, found: &mut Vec<Field>, index_by_name: &mut HashMap<String, usize>)
 ```
-
-Collect class annotations and `self.x` assignments as data fields.
 
 ---
 
 ## `self_attribute()`
 
 ```
-fn self_attribute(expr: &Expr) -> Option<String>
+fn self_attribute(source: &str, node: &Node<'_>) -> Option<String>
 ```
 
-Extract `x` from a `self.x` attribute expression.
+---
+
+## `add_field()`
+
+```
+fn add_field(found: &mut Vec<Field>, index_by_name: &mut HashMap<String, usize>, name: &str, type_: &str, visibility: &str)
+```
 
 ---
 
@@ -1503,116 +1557,92 @@ Extract `x` from a `self.x` attribute expression.
 fn visibility(name: &str) -> &'static str
 ```
 
-Infer field visibility from Python's underscore conventions.
+---
+
+## `collect_imports()`
+
+```
+fn collect_imports(source: &str, root: &Node<'_>) -> Vec<String>
+```
 
 ---
 
-## `node_name()`
+## `collect_import_nodes()`
 
 ```
-fn node_name(expr: &Expr) -> String
+fn collect_import_nodes(source: &str, node: &Node<'_>, out: &mut Vec<String>)
 ```
-
-Return the simple name of a name, attribute, or subscript expression.
 
 ---
 
-## `imports()`
+## `import_name()`
 
 ```
-fn imports(body: &[Stmt]) -> Vec<String>
+fn import_name(source: &str, node: &Node<'_>) -> String
 ```
-
-Collect imported module names in source order.
 
 ---
 
-## `calls()`
+## `collect_calls()`
 
 ```
-fn calls(stmt: &Stmt) -> Vec<String>
+fn collect_calls(source: &str, root: &Node<'_>) -> Vec<String>
 ```
 
-Collect call expressions from a statement body.
+---
+
+## `walk_calls()`
+
+```
+fn walk_calls(source: &str, node: &Node<'_>, depth: usize, out: &mut Vec<String>)
+```
 
 ---
 
 ## `call_name()`
 
 ```
-fn call_name(expr: &Expr) -> String
-```
-
-Render a call target as a dotted name.
-
----
-
-## `is_enum()`
-
-```
-fn is_enum(node: &StmtClassDef) -> bool
-```
-
-True when a class inherits from one of the known enum bases.
-
----
-
-## `is_abstract()`
-
-```
-fn is_abstract(node: &StmtClassDef) -> bool
-```
-
-True when a class is abstract by base class or abstract methods.
-
----
-
-## `is_abstract_method()`
-
-```
-fn is_abstract_method(node: &StmtFunctionDef) -> bool
-```
-
-True when a method carries an abstract decorator.
-
----
-
-## `collect_bfs()`
-
-```
-fn collect_bfs(stmts: &'a [Stmt], skip_defs: bool) -> Vec<Vec<AnyNodeRef<'a>>>
-```
-
-Collect AST nodes into breadth-first levels, optionally pruning nested function/class/lambda bodies.
-
----
-
-## `BfsVisitor` Struct Reference
-
-AST visitor that records every node by its depth from the roots.
-
-### Fields
-
-| Visibility | Type | Name | Description |
-|------------|------|------|-------------|
-| private | `usize` | `depth` | Current traversal depth. |
-| private | `Vec<Vec<AnyNodeRef<'a>>>` | `levels` | Nodes grouped by traversal depth. |
-| private | `bool` | `skip_defs` | Whether nested function, class, and lambda bodies are pruned. |
-
----
-
-## `parses_animal_fixture()`
-
-```
-fn parses_animal_fixture()
+fn call_name(source: &str, node: &Node<'_>) -> String
 ```
 
 ---
 
-## `unparses_annotations_like_ast_unparse()`
+## `node_name()`
 
 ```
-fn unparses_annotations_like_ast_unparse()
+fn node_name(source: &str, node: &Node<'_>) -> String
+```
+
+---
+
+## `unparse_text()`
+
+```
+fn unparse_text(source: &str, node: &Node<'_>) -> String
+```
+
+---
+
+## `parse_expr()`
+
+```
+fn parse_expr(source: &str, node: &Node<'_>) -> PyExpr
+```
+
+---
+
+## `render_expr()`
+
+```
+fn render_expr(expr: &PyExpr) -> String
+```
+
+---
+
+## `unparse_string()`
+
+```
+fn unparse_string(raw: &str) -> String
 ```
 
 # registry.rs
@@ -1634,7 +1664,7 @@ Maps file paths to the language plugin that can parse them.
 
 ## `RustLanguage` Struct Reference
 
-Parse Rust items from `///` and `/** ... */` doc comments.
+Parse Rust items from documentation comments and Tree-sitter syntax nodes.
 
 **Implements:** `Language`
 
@@ -1642,38 +1672,171 @@ Parse Rust items from `///` and `/** ... */` doc comments.
 
 | Return Type | Signature & Description |
 |-------------|-------------------------|
-| `&'static [&'static str]` | `fn extensions(&self) -> &'static [&'static str]`<br>Rust uses a single `.rs` extension. |
-| `Vec<Entity>` | `fn parse(&self, source: &str, filename: &str) -> Vec<Entity>`<br>Scan doc comments and emit Rust entities in source order. |
+| `&'static [&'static str]` | `fn extensions(&self) -> &'static [&'static str]`<br>Return Rust source extensions. |
+| `Vec<Entity>` | `fn parse(&self, source: &str, filename: &str) -> Vec<Entity>`<br>Parse one Rust source file. |
+
+### Method Contracts
+
+#### `extensions()`
+
+**Returns:** The `.rs` extension.
+
+#### `parse()`
+
+**Parameters**
+
+| Direction | Name | Type | Description |
+|-----------|------|------|-------------|
+| [in] | `source` | `` | Rust source text. |
+| [in] | `filename` | `` | Source filename used as the module name. |
+
+**Returns:** Contract entities, or an empty list for invalid syntax.
 
 ---
 
-## `parse_rust_fields()`
+## `text_at()`
 
 ```
-fn parse_rust_fields(lines: &[&str]) -> Vec<Field>
+fn text_at(source: &str, node: &Node<'_>) -> String
 ```
-
-Parse documented fields from a struct or enum body.
 
 ---
 
-## `parse_variants()`
+## `node_name()`
 
 ```
-fn parse_variants(lines: &[&str]) -> Vec<Variant>
+fn node_name(source: &str, node: &Node<'_>) -> String
 ```
-
-Parse enum variants and their attached doc comments.
 
 ---
 
-## `parse_impl_body()`
+## `preceding_doc()`
 
 ```
-fn parse_impl_body(lines: &[&str]) -> Vec<Entity>
+fn preceding_doc(source: &str, node: &Node<'_>) -> Vec<String>
 ```
 
-Parse the methods declared inside an `impl` block.
+---
+
+## `clean_line_comment()`
+
+```
+fn clean_line_comment(text: &str) -> String
+```
+
+---
+
+## `clean_block_comment()`
+
+```
+fn clean_block_comment(text: &str) -> Vec<String>
+```
+
+---
+
+## `doc_for()`
+
+```
+fn doc_for(source: &str, node: &Node<'_>) -> crate::model::Doc
+```
+
+---
+
+## `visibility()`
+
+```
+fn visibility(node: &Node<'_>) -> Visibility
+```
+
+---
+
+## `struct_entity()`
+
+```
+fn struct_entity(source: &str, node: &Node<'_>) -> Entity
+```
+
+---
+
+## `enum_entity()`
+
+```
+fn enum_entity(source: &str, node: &Node<'_>) -> Entity
+```
+
+---
+
+## `trait_entity()`
+
+```
+fn trait_entity(source: &str, node: &Node<'_>) -> Entity
+```
+
+---
+
+## `function_entity()`
+
+```
+fn function_entity(source: &str, node: &Node<'_>, kind: EntityKind) -> Entity
+```
+
+---
+
+## `parameter_text()`
+
+```
+fn parameter_text(source: &str, parameters: &Node<'_>) -> String
+```
+
+---
+
+## `merge_impl()`
+
+```
+fn merge_impl(source: &str, node: &Node<'_>, entities: &mut [Entity], by_name: &HashMap<String, usize>)
+```
+
+---
+
+## `includes()`
+
+```
+fn includes(source: &str, root: &Node<'_>) -> Vec<String>
+```
+
+---
+
+## `calls()`
+
+```
+fn calls(source: &str, root: &Node<'_>) -> Vec<String>
+```
+
+---
+
+## `walk_calls()`
+
+```
+fn walk_calls(source: &str, node: &Node<'_>, out: &mut Vec<String>)
+```
+
+---
+
+## `call_name()`
+
+```
+fn call_name(source: &str, node: &Node<'_>) -> String
+```
+
+---
+
+## `split_args()`
+
+```
+fn split_args(raw: &str) -> Vec<String>
+```
+
+Split a parameter list on top-level commas.
 
 # main.rs
 
@@ -1715,6 +1878,7 @@ A documented parameter or field.
 | Visibility | Type | Name | Description |
 |------------|------|------|-------------|
 | public | `String` | `name` | Parameter name as written in the source. |
+| public | `String` | `r#type` | Declared type, when the parser can infer one. |
 | public | `String` | `direction` | Doxygen direction (`in`, `out`, or `in,out`). |
 | public | `String` | `description` | Human-readable description collected from the doc block. |
 
@@ -1749,7 +1913,9 @@ One data member of a class, struct, or interface.
 | Visibility | Type | Name | Description |
 |------------|------|------|-------------|
 | public | `String` | `name` | Member name. |
+| public | `String` | `r#type` | Declared member type. |
 | public | `Visibility` | `visibility` | Effective member visibility. |
+| public | `bool` | `r#static` | Whether the member is declared `static`. |
 | public | `String` | `description` | Documentation attached to the member. |
 
 ### Public Member Functions
@@ -1805,6 +1971,7 @@ One documented declaration and its optional children.
 | public | `String` | `signature` | Signature exactly as rendered in reference tables. |
 | public | `String` | `return_type` | Declared return type. |
 | public | `Doc` | `doc` | Structured documentation. |
+| public | `bool` | `r#abstract` | Whether the declaration is abstract. |
 | public | `Vec<Entity>` | `members` | Nested methods, functions, or type members. |
 | public | `Vec<Variant>` | `variants` | Enum cases, for [`EntityKind::Enum`]. |
 | public | `Vec<Field>` | `fields` | Data members, for class-like declarations. |
@@ -1850,6 +2017,150 @@ Append a non-empty, unique string while preserving insertion order.
 This is the legacy-compatible free-function form used by language parsers.
 
 # tree_sitter.rs
+
+## `python_parser()`
+
+```
+fn python_parser() -> anyhow::Result<Parser>
+```
+
+Create a parser for Python source.
+
+### Returns
+
+A configured Python parser.
+
+---
+
+## `parse_python()`
+
+```
+fn parse_python(source: &str) -> Option<Tree>
+```
+
+Parse Python source and reject trees containing syntax errors.
+
+### Parameters
+
+| Direction | Name | Type | Description |
+|-----------|------|------|-------------|
+| [in] | `source` | `` | Python source text. |
+
+### Returns
+
+Parsed tree, or `None` for invalid syntax.
+
+---
+
+## `rust_parser()`
+
+```
+fn rust_parser() -> anyhow::Result<Parser>
+```
+
+Create a parser for Rust source.
+
+### Returns
+
+A configured Rust parser.
+
+---
+
+## `parse_rust()`
+
+```
+fn parse_rust(source: &str) -> Option<Tree>
+```
+
+Parse Rust source and reject trees containing syntax errors.
+
+### Parameters
+
+| Direction | Name | Type | Description |
+|-----------|------|------|-------------|
+| [in] | `source` | `` | Rust source text. |
+
+### Returns
+
+Parsed tree, or `None` for invalid syntax.
+
+---
+
+## `cpp_parser()`
+
+```
+fn cpp_parser() -> anyhow::Result<Parser>
+```
+
+Create a parser for C++ source.
+
+### Returns
+
+A configured C++ parser.
+
+---
+
+## `parse_cpp()`
+
+```
+fn parse_cpp(source: &str) -> Option<Tree>
+```
+
+Parse C++ source and reject syntax-error trees.
+
+### Parameters
+
+| Direction | Name | Type | Description |
+|-----------|------|------|-------------|
+| [in] | `source` | `` | C++ source text. |
+
+### Returns
+
+Parsed tree, or `None` for invalid syntax.
+
+---
+
+## `bash_parser()`
+
+```
+fn bash_parser() -> anyhow::Result<Parser>
+```
+
+Create a parser for Bash source.
+
+### Returns
+
+A configured Bash parser.
+
+---
+
+## `parse_bash()`
+
+```
+fn parse_bash(source: &str) -> Option<Tree>
+```
+
+Parse Bash source and reject syntax-error trees.
+
+### Parameters
+
+| Direction | Name | Type | Description |
+|-----------|------|------|-------------|
+| [in] | `source` | `` | Bash source text. |
+
+### Returns
+
+Parsed tree, or `None` for invalid syntax.
+
+---
+
+## `has_missing()`
+
+```
+fn has_missing(node: &tree_sitter::Node<'_>) -> bool
+```
+
+---
 
 ## `parse()`
 
@@ -2036,14 +2347,6 @@ Wrap content in a fenced Markdown code block.
 
 A fenced code block.
 
----
-
-## `formats_markdown_primitives()`
-
-```
-fn formats_markdown_primitives()
-```
-
 # mermaid.rs
 
 ## `MermaidRenderer` Struct Reference
@@ -2059,6 +2362,7 @@ Render parsed entities as Mermaid diagrams.
 | `String` | `fn render_all(&self, entities: &[Entity], kinds: Option<&[String]>) -> String`<br>Render a titled Mermaid document containing the selected kinds. |
 | `String` | `fn class_diagram(&self, entities: &[Entity]) -> String`<br>Render the detailed class diagram. |
 | `String` | `fn inheritance_diagram(&self, entities: &[Entity]) -> String`<br>Render the inheritance-only diagram. |
+| `String` | `fn class_diagram_impl(&self, entities: &[Entity], detailed: bool, dependencies: bool, include_enums: bool) -> String`<br>Render a class diagram with configurable detail and edge kinds. |
 | `String` | `fn collaboration_diagram(&self, entities: &[Entity]) -> String`<br>Render a flowchart of types used by fields, returns, and parameters. |
 | `String` | `fn call_graph(&self, entities: &[Entity]) -> String`<br>Render the callee-oriented call graph. |
 | `String` | `fn caller_graph(&self, entities: &[Entity]) -> String`<br>Render the caller-oriented call graph. |
@@ -2109,6 +2413,221 @@ fn block(entity: &Entity, identifier: &str, detailed: bool) -> Vec<String>
 ```
 
 Render one class block, including fields, methods, and enum cases.
+
+---
+
+## `stereotype()`
+
+```
+fn stereotype(entity: &Entity) -> &'static str
+```
+
+Return the Mermaid stereotype for an entity, or an empty string.
+
+---
+
+## `display_type()`
+
+```
+fn display_type(raw: &str) -> String
+```
+
+Convert a source type into Mermaid-safe display text.
+
+---
+
+## `class_edges()`
+
+```
+fn class_edges(nodes: &[&Entity], ids: &Identifiers, dependencies: bool) -> Vec<String>
+```
+
+Build inheritance, implementation, and optional dependency edges.
+
+---
+
+## `lookup()`
+
+```
+fn lookup(name: &str, by_name: &HashMap<String, String>, by_file: &HashMap<(String, String), String>, path: &str) -> Option<String>
+```
+
+Resolve a type name against same-file nodes first, then by name.
+
+---
+
+## `type_names()`
+
+```
+fn type_names(raw: &str) -> Vec<String>
+```
+
+Extract referenced type tokens, ignoring built-in scalar types.
+
+---
+
+## `used_types()`
+
+```
+fn used_types(entity: &Entity) -> Vec<String>
+```
+
+Collect unique type names referenced by fields, returns, and parameters.
+
+---
+
+## `functions()`
+
+```
+fn functions(entities: &'a [Entity], owner: &str) -> Vec<(&'a Entity, String)>
+```
+
+Flatten functions and methods, tagging each with its owning type name.
+
+---
+
+## `FunctionNodes` Struct Reference
+
+Identifiers and labels assigned to function and method nodes.
+
+### Fields
+
+| Visibility | Type | Name | Description |
+|------------|------|------|-------------|
+| private | `HashMap<usize, String>` | `ids` | Identifier for each callable node index. |
+| private | `HashMap<usize, String>` | `labels` | Display label for each callable node index. |
+| private | `HashMap<String, String>` | `by_name` | First identifier registered for each name. |
+| private | `HashMap<(String, String), String>` | `by_file` | First identifier registered for each `(path, name)` pair. |
+
+---
+
+## `function_nodes()`
+
+```
+fn function_nodes(functions: &[(&Entity, String)]) -> FunctionNodes
+```
+
+Assign stable identifiers and qualified labels to callable nodes.
+
+---
+
+## `call_target()`
+
+```
+fn call_target(call: &str, owner: &str) -> String
+```
+
+Qualify `self.method` and `cls.method` calls with the owning type.
+
+---
+
+## `qualified()`
+
+```
+fn qualified(entity: &Entity, owner: &str) -> String
+```
+
+Build a dotted label from module, owner, and entity names.
+
+---
+
+## `modules()`
+
+```
+fn modules(entities: &[Entity]) -> Vec<&Entity>
+```
+
+Return the module entities from a flat entity list.
+
+---
+
+## `module_index()`
+
+```
+fn module_index(modules: &[&Entity]) -> (HashMap<usize, String>, HashMap<String, String>)
+```
+
+Assign module identifiers and index them by path, stem, and name.
+
+---
+
+## `resolve_module()`
+
+```
+fn resolve_module(target: &str, by_key: &HashMap<String, String>) -> Option<String>
+```
+
+Resolve an include target to a known module identifier.
+
+---
+
+## `include_candidates()`
+
+```
+fn include_candidates(target: &str) -> Vec<String>
+```
+
+Expand one include string into the names `dox.py` tries to match.
+
+---
+
+## `sanitize()`
+
+```
+fn sanitize(value: &str) -> String
+```
+
+Replace every character Mermaid cannot use in an identifier.
+
+---
+
+## `label()`
+
+```
+fn label(text: &str) -> String
+```
+
+Escape text for a double-quoted Mermaid label.
+
+---
+
+## `as_posix()`
+
+```
+fn as_posix(path: &str) -> String
+```
+
+Normalize a path to POSIX separators for display.
+
+---
+
+## `path_file_name()`
+
+```
+fn path_file_name(path: &str) -> Option<String>
+```
+
+Return the final path component, when there is one.
+
+---
+
+## `path_file_stem()`
+
+```
+fn path_file_stem(path: &str) -> Option<String>
+```
+
+Return the final path component without its extension.
+
+---
+
+## `parent_posix()`
+
+```
+fn parent_posix(path: &str) -> String
+```
+
+Return the parent directory in POSIX form, using `.` for none.
 
 # reference.rs
 
